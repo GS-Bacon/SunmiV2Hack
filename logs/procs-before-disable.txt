@@ -1,0 +1,12 @@
+u0_a34    1608  443   1419616 0              0 00000000 S com.sunmi.usercenter:Transport
+u0_a63    1625  443   1024648 11584          0 00000000 S com.sunmi.dataService
+u0_a26    1637  443   1029976 3384           0 00000000 S com.sunmi.baseservice
+u0_a71    1658  443   1006980 0              0 00000000 S com.sunmi.toolbox
+u0_a28    1685  443   1065536 3112           0 00000000 S com.woyou.launcher
+u0_a30    1864  443   1011808 2996           0 00000000 S com.sunmi.ota
+u0_a32    1910  443   1024468 0              0 00000000 S com.sunmi.remotecontrol.pro
+u0_a70    1969  443   1016104 0              0 00000000 S woyou.aidlservice.jiuiv5
+u0_a70    1994  443   1009480 0              0 00000000 S woyou.aidlservice.jiuiv5:cloud
+u0_a60    2032  443   1409968 11656          0 00000000 S woyou.market
+u0_a72    2456  443   1015188 2240           0 00000000 S com.sunmi.newuserfeedback
+u0_a66    2484  443   1001072 0              0 00000000 S com.sunmi.toolbox.log.v2

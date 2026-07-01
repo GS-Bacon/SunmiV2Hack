@@ -1,0 +1,85 @@
+=== by-name ===
+total 0
+drwxr-xr-x 2 root root 740 2026-07-01 16:49 .
+drwxr-xr-x 4 root root 860 2026-07-01 16:49 ..
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 boot -> /dev/block/mmcblk0p27
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 boot_para -> /dev/block/mmcblk0p1
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 cache -> /dev/block/mmcblk0p33
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 efuse -> /dev/block/mmcblk0p15
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 expdb -> /dev/block/mmcblk0p4
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 flashinfo -> /dev/block/mmcblk0p35
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 frp -> /dev/block/mmcblk0p5
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 gz1 -> /dev/block/mmcblk0p20
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 gz2 -> /dev/block/mmcblk0p21
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 lk -> /dev/block/mmcblk0p23
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 lk2 -> /dev/block/mmcblk0p24
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 loader_ext1 -> /dev/block/mmcblk0p25
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 loader_ext2 -> /dev/block/mmcblk0p26
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 logo -> /dev/block/mmcblk0p28
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 mcupmfw -> /dev/block/mmcblk0p19
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 md1dsp -> /dev/block/mmcblk0p17
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 md1img -> /dev/block/mmcblk0p16
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 metadata -> /dev/block/mmcblk0p8
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 nvcfg -> /dev/block/mmcblk0p6
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 nvdata -> /dev/block/mmcblk0p7
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 nvram -> /dev/block/mmcblk0p22
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 para -> /dev/block/mmcblk0p3
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 persist -> /dev/block/mmcblk0p12
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 proinfo -> /dev/block/mmcblk0p14
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 protect1 -> /dev/block/mmcblk0p9
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 protect2 -> /dev/block/mmcblk0p10
+lrwxrwxrwx 1 root root  20 2026-07-01 16:49 recovery -> /dev/block/mmcblk0p2
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 sec1 -> /dev/block/mmcblk0p13
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 seccfg -> /dev/block/mmcblk0p11
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 spmfw -> /dev/block/mmcblk0p18
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 sunmi -> /dev/block/mmcblk0p29
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 system -> /dev/block/mmcblk0p32
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 tee1 -> /dev/block/mmcblk0p30
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 tee2 -> /dev/block/mmcblk0p31
+lrwxrwxrwx 1 root root  21 2026-07-01 16:49 userdata -> /dev/block/mmcblk0p34
+=== /proc/emmc ===
+=== /proc/partitions ===
+major minor  #blocks  name
+
+ 254        0     786432 zram0
+ 179        0    7471104 mmcblk0
+ 179        1       1024 mmcblk0p1
+ 179        2      61440 mmcblk0p2
+ 179        3        512 mmcblk0p3
+ 179        4      20480 mmcblk0p4
+ 179        5       1024 mmcblk0p5
+ 179        6       8192 mmcblk0p6
+ 179        7      32768 mmcblk0p7
+ 179        8      32768 mmcblk0p8
+ 179        9       8192 mmcblk0p9
+ 179       10      13792 mmcblk0p10
+ 179       11       8192 mmcblk0p11
+ 179       12      49152 mmcblk0p12
+ 179       13       2048 mmcblk0p13
+ 179       14       3072 mmcblk0p14
+ 179       15        512 mmcblk0p15
+ 179       16      65536 mmcblk0p16
+ 179       17      16384 mmcblk0p17
+ 179       18       1024 mmcblk0p18
+ 179       19       1024 mmcblk0p19
+ 179       20      16384 mmcblk0p20
+ 179       21      16384 mmcblk0p21
+ 179       22       5120 mmcblk0p22
+ 179       23       1024 mmcblk0p23
+ 179       24       1024 mmcblk0p24
+ 179       25         64 mmcblk0p25
+ 179       26         64 mmcblk0p26
+ 179       27      24576 mmcblk0p27
+ 179       28       8192 mmcblk0p28
+ 179       29      10240 mmcblk0p29
+ 179       30       5120 mmcblk0p30
+ 179       31      10624 mmcblk0p31
+ 259        0    2621440 mmcblk0p32
+ 259        1     442368 mmcblk0p33
+ 259        2    3964911 mmcblk0p34
+ 259        3      16384 mmcblk0p35
+ 179       96       4096 mmcblk0rpmb
+ 179       64       4096 mmcblk0boot1
+ 179       32       4096 mmcblk0boot0
+ 253        0    2580508 dm-0
+ 253        1    3964911 dm-1

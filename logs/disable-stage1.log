@@ -1,0 +1,45 @@
+com.sunmi.welcome: Package com.sunmi.welcome new state: disabled-user
+com.sunmi.wallpaper: Package com.sunmi.wallpaper new state: disabled-user
+com.sunmi.gallery: Package com.sunmi.gallery new state: disabled-user
+com.sunmi.agreement: Package com.sunmi.agreement new state: disabled-user
+com.sunmi.usercenter: Package com.sunmi.usercenter new state: disabled-user
+com.sunmi.newuserfeedback: Package com.sunmi.newuserfeedback new state: disabled-user
+com.sunmi.monitor: Package com.sunmi.monitor new state: disabled-user
+com.sunmi.toolbox.log.v2: Package com.sunmi.toolbox.log.v2 new state: disabled-user
+com.sunmi.toolbox: Package com.sunmi.toolbox new state: disabled-user
+com.sunmi.remotecontrol.pro: Package com.sunmi.remotecontrol.pro new state: disabled-user
+com.sunmi.ota: Package com.sunmi.ota new state: disabled-user
+com.sunmi.input.pinyin: Package com.sunmi.input.pinyin new state: disabled-user
+com.google.android.inputmethod.pinyin: Package com.google.android.inputmethod.pinyin new state: disabled-user
+woyou.market: Package woyou.market new state: disabled-user
+com.sunmi.payment: Package com.sunmi.payment new state: disabled-user
+com.sunmi.payment.mobile: Package com.sunmi.payment.mobile new state: disabled-user
+com.sunmi.sunmiqrcodescanner: Package com.sunmi.sunmiqrcodescanner new state: disabled-user
+--- forcibly kill remaining processes ---
+--- verify disabled ---
+package:woyou.market
+package:com.sunmi.toolbox
+package:com.sunmi.newuserfeedback
+package:com.android.soundrecorder
+package:com.android.vending
+package:com.sunmi.payment
+package:com.android.contacts
+package:com.android.mms
+package:com.google.android.gm
+package:com.sunmi.remotecontrol.pro
+package:com.sunmi.gallery
+package:com.google.android.apps.maps
+package:com.sunmi.input.pinyin
+package:com.android.dialer
+package:com.google.android.gms
+package:com.sunmi.agreement
+package:com.sunmi.welcome
+package:com.sunmi.monitor
+package:com.google.android.inputmethod.pinyin
+package:com.sunmi.wallpaper
+package:com.sunmi.sunmiqrcodescanner
+package:com.sunmi.payment.mobile
+package:com.sunmi.usercenter
+package:com.sunmi.toolbox.log.v2
+package:com.sunmi.ota
+package:com.sunmi.sidekey

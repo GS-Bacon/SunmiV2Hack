@@ -1,0 +1,30 @@
+Camera module HAL API version: 0x100
+Camera module API version: 0x204
+Camera module name: MediaTek Camera Module
+Camera module author: MediaTek
+Number of camera devices: 1
+Number of normal camera devices: 1
+Active Camera Clients:
+[]
+Allowed users:
+0
+Vendor tag definitions:
+    Dumping configured vendor tag descriptors: 35 entries
+      0x80000000 (gesturemode) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000001 (gestureresult) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000002 (smiledetectmode) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000003 (smiledetectresult) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000004 (asdmode) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000005 (asdresult) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000006 (availablegesturemodes) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000007 (availablesmiledetectmodes) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000008 (availableasdmodes) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80000009 (forceface3a) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x8000000a (availableforceface3a) with type 1 (int32) defined in section com.mediatek.facefeature
+      0x80010000 (3dnrmode) with type 1 (int32) defined in section com.mediatek.nrfeature
+      0x80010001 (available3dnrmodes) with type 1 (int32) defined in section com.mediatek.nrfeature
+      0x80020000 (doflevel) with type 1 (int32) defined in section com.mediatek.stereofeature
+      0x80020001 (supporteddoflevel) with type 1 (int32) defined in section com.mediatek.stereofeature
+      0x80020002 (resultdoflevel) with type 1 (int32) defined in section com.mediatek.stereofeature
+      0x80020003 (stereowarning) with type 1 (int32) defined in section com.mediatek.stereofeature
+      0x80020004 (depthafon) with type 1 (int32) defined in section com.mediatek.stereofeature

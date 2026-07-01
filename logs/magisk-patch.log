@@ -1,0 +1,83 @@
+- Unpacking boot image
+Parsing boot image: [/sdcard/boot-restore.img]
+HEADER_VER      [0]
+KERNEL_SZ       [7748221]
+RAMDISK_SZ      [2045837]
+SECOND_SZ       [0]
+EXTRA_SZ        [0]
+OS_VERSION      [7.1.1]
+OS_PATCH_LEVEL  [2024-04]
+PAGESIZE        [2048]
+NAME            [1773911932]
+CMDLINE         [bootopt=64S3,32S1,32S1 buildvariant=user]
+CHECKSUM        [4d3b59e5a477adf2498f34ea9629accd768eab6e000000000000000000000000]
+KERNEL_DTB_SZ   [75541]
+ZIMAGE_KERNEL
+KERNEL_FMT      [gzip]
+RAMDISK_FMT     [gzip]
+AVB1_SIGNED
+- Checking ramdisk status
+Loading cpio: [ramdisk.cpio]
+- Stock boot image detected
+- Patching ramdisk
+resetprop: get prop [ro.crypto.state]=[encrypted]
+resetprop: get prop [ro.crypto.type]=[block]
+- Pre-init storage partition: cache
+Loading cpio: [ramdisk.cpio]
+Add file [init] (100750)
+Create directory [overlay.d] (0750)
+Create directory [overlay.d/sbin] (0750)
+Add file [overlay.d/sbin/magisk.xz] (100644)
+Add file [overlay.d/sbin/stub.xz] (100644)
+Add file [overlay.d/sbin/init-ld.xz] (100644)
+Patch with flag KEEPVERITY=[true] KEEPFORCEENCRYPT=[false]
+Remove pattern [,forceencrypt=/dev/block/platform/bootdevice/by-name/metadata]
+Loading cpio: [ramdisk.cpio.orig]
+Backup [fstab.mt6739] -> [.backup/fstab.mt6739.xz]
+Backup [init] -> [.backup/init.xz]
+Record new entry: [overlay.d] -> [.backup/.rmlist]
+Record new entry: [overlay.d/sbin] -> [.backup/.rmlist]
+Record new entry: [overlay.d/sbin/init-ld.xz] -> [.backup/.rmlist]
+Record new entry: [overlay.d/sbin/magisk.xz] -> [.backup/.rmlist]
+Record new entry: [overlay.d/sbin/stub.xz] -> [.backup/.rmlist]
+Create directory [.backup] (0000)
+Add file [.backup/.magisk] (100000)
+Dumping cpio: [ramdisk.cpio]
+Loading dtbs from [kernel_dtb]
+Loading dtbs from [kernel_dtb]
+Failed to patch
+Failed to patch
+Failed to patch
+- Repacking boot image
+Parsing boot image: [/sdcard/boot-restore.img]
+HEADER_VER      [0]
+KERNEL_SZ       [7748221]
+RAMDISK_SZ      [2045837]
+SECOND_SZ       [0]
+EXTRA_SZ        [0]
+OS_VERSION      [7.1.1]
+OS_PATCH_LEVEL  [2024-04]
+PAGESIZE        [2048]
+NAME            [1773911932]
+CMDLINE         [bootopt=64S3,32S1,32S1 buildvariant=user]
+CHECKSUM        [4d3b59e5a477adf2498f34ea9629accd768eab6e000000000000000000000000]
+KERNEL_DTB_SZ   [75541]
+ZIMAGE_KERNEL
+KERNEL_FMT      [gzip]
+RAMDISK_FMT     [gzip]
+AVB1_SIGNED
+Repack to boot image: [new-boot.img]
+HEADER_VER      [0]
+KERNEL_SZ       [7748221]
+RAMDISK_SZ      [3208948]
+SECOND_SZ       [0]
+EXTRA_SZ        [0]
+OS_VERSION      [7.1.1]
+OS_PATCH_LEVEL  [2024-04]
+PAGESIZE        [2048]
+NAME            [1773911932]
+CMDLINE         [bootopt=64S3,32S1,32S1 buildvariant=user]
+CHECKSUM        [a79d29a1d5e9029cb43e9d7cbbe42f96060ce6f4000000000000000000000000]
+=== after patch, listing ===
+-rw-r--r-- 1 root root 25165824 2026-07-01 17:31 new-boot.img
+new-boot.img OK

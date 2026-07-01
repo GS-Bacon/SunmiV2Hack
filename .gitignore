@@ -1,0 +1,21 @@
+# 巨大バイナリ(パーティション dump、firmware、SDK 系ツール)
+dump/
+tools/
+
+# 作業用一時ディレクトリ
+scratch/
+
+# 秘匿情報が入り得るログ(getprop に一部個人情報)は選択的に上げる
+logs/getprop-initial.txt
+
+# Flutter プロジェクトの依存(app/ 配下は後で作成、標準の Flutter .gitignore を使う想定)
+app/build/
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+
+# エディタ・OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

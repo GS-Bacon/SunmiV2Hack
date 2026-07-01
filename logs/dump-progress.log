@@ -1,0 +1,35 @@
+boot -> 25165824 bytes
+recovery -> 62914560 bytes
+nvram -> 5242880 bytes
+nvdata -> 33554432 bytes
+proinfo -> 3145728 bytes
+persist -> 50331648 bytes
+seccfg -> 8388608 bytes
+sunmi -> 10485760 bytes
+lk -> 1048576 bytes
+lk2 -> 1048576 bytes
+logo -> 8388608 bytes
+tee1 -> 5242880 bytes
+tee2 -> 10878976 bytes
+md1img -> 67108864 bytes
+md1dsp -> 16777216 bytes
+boot_para -> 1048576 bytes
+para -> 524288 bytes
+frp -> 1048576 bytes
+nvcfg -> 8388608 bytes
+metadata -> 33554432 bytes
+protect1 -> 8388608 bytes
+protect2 -> 14123008 bytes
+sec1 -> 2097152 bytes
+efuse -> 524288 bytes
+spmfw -> 1048576 bytes
+mcupmfw -> 1048576 bytes
+gz1 -> 16777216 bytes
+gz2 -> 16777216 bytes
+loader_ext1 -> 65536 bytes
+loader_ext2 -> 65536 bytes
+flashinfo -> 16777216 bytes
+preloader-boot0 -> 4194304
+preloader-boot1 -> 4194304
+system -> 2684354560 bytes
+=== done ===
