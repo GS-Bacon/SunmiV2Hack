@@ -145,28 +145,55 @@ RE ツールチェーンの整備と USB キャプチャ環境の構築。
 
 正規の SP Flash Tool + auth_sv5.auth 経由の焼き通信を pcap で完全記録し、Cyrus プロトコルの生のパケット列を得る。
 
-### 手順
+### 手順(改訂: Linux 単独で完結)
 
-1. Windows VM 内で SP Flash Tool + auth 用意
-2. USBPcap で 0e8d:2008 (Cyrus) 監視開始
-3. **前回 D-2 と同じ手順で logo 部分焼きを実行**(既に安全実績)
-4. 通信をキャプチャ、pcapng で保存
-5. 追加で FormatExcept_BL テストや Download Only(logo のみ)も別 pcap で取得
-6. 認証段階(auth ファイル送信)と焼き段階の境界を分離
+**Windows VM は不要**。`tools/SP_Flash_Tool_Linux/` は前回 D-2 で logo 焼き動作実績あり、Linux kernel の `usbmon` + tshark で kernel 層 USB キャプチャできる。Windows VM の準備コスト(数時間)を skip。
+
+1. `sudo modprobe usbmon`
+2. インターフェース確認: `ls /sys/kernel/debug/usb/usbmon/`(通常 `0u`, `1u`, ...)
+3. 端末を電源 OFF → USB 挿しで Cyrus (0e8d:2008) mode に落とす、`lsusb` で確認
+4. tshark で全 bus キャプチャ開始(root 必要):
+   ```
+   sudo tshark -i usbmon0 -w logs/experiment-G2-cyrus-logo.pcapng
+   ```
+   → 0e8d:2008 を含む bus が別番号なら usbmon1/2/... に切替
+5. 別 window で SP Flash Tool GUI 起動 → 前回 D-2 と同じ **logo 部分焼き**を実行
+6. tshark を Ctrl-C 停止、pcapng 保存
+7. 追加パターンで別 pcap も取得:
+   - `logs/experiment-G2-cyrus-download-only.pcapng`(auth 無しで download 試行 → 拒否ログ含む)
+   - `logs/experiment-G2-cyrus-handshake.pcapng`(接続だけして即切断、handshake だけ抽出)
+8. tshark で post 解析:
+   ```
+   tshark -r logs/*.pcapng -Y 'usb.data_len>0' -T fields -e frame.number -e usb.data_fragment
+   ```
 
 ### 検証
 
 - pcap ファイルに 0e8d:2008 のパケットが完全記録されている
 - 認証 handshake、DA 転送、コマンド送信、レスポンスの区別が付く
+- G-1 で特定したコマンド ID `0xD4/D5/D7/DB` のバイトが pcap 中に見える
 
 ### 記録
 
-- `logs/experiment-G2-cyrus-capture.pcapng`
-- `logs/experiment-G2-notes.md` — 手順とキャプチャの対応表
+- `logs/experiment-G2-cyrus-logo.pcapng` — 正規手順の完全記録
+- `logs/experiment-G2-cyrus-download-only.pcapng` — auth 無し試行
+- `logs/experiment-G2-cyrus-handshake.pcapng` — 接続 handshake のみ
+- `logs/experiment-G2-notes.md` — 手順・タイムスタンプ・観察
 
 ### 中止判断 G-2
 
-- USB pass-through が不安定でキャプチャ完全性が保証できない → 中止 or 実機 Windows PC に切り替え
+- Linux 版 SP Flash Tool が新 preloader (0e8d:2008) で不具合 → Fallback で Windows VM + Windows 版 SP Flash Tool + USBPcap に切替(数時間の準備追加)
+- usbmon が端末を認識しない → udev rule 見直し(前回 mtkclient 用に整備済)
+
+### G-2 kickoff チェックリスト(次セッション先頭で確認)
+
+- [ ] `lsmod | grep usbmon` で usbmon が使えるか、無ければ `sudo modprobe usbmon`
+- [ ] 端末バッテリー 90% 以上、AC 接続
+- [ ] `tools/SP_Flash_Tool_Linux/flash_tool` が起動する(前回動作確認済み)
+- [ ] `tools/firmware/auth_sv5.auth` 存在確認
+- [ ] `tools/firmware/Firmware/MT6739_Android_scatter_emmc.txt` 存在確認
+- [ ] Sunmi Recovery 復旧手順を再確認(音量+ + 電源)
+- [ ] 前回の D-2 logo 焼き手順を頭に入れておく(WORKLOG 2026-07-01 21:30 参照)
 
 ---
 
