@@ -1,5 +1,24 @@
+diff --git a/mtkclient/Library/DA/mtk_da_handler.py b/mtkclient/Library/DA/mtk_da_handler.py
+index 00ab920..45ea2ef 100644
+--- a/mtkclient/Library/DA/mtk_da_handler.py
++++ b/mtkclient/Library/DA/mtk_da_handler.py
+@@ -129,8 +129,12 @@ class DaHandler(metaclass=LogBase):
+                 mtk.reinited = True
+                 return mtk
+         if mtk.config.target_config is None:
+-            self.info("Please disconnect, start mtkclient and reconnect.")
+-            return None
++            # Sunmi V2 fix: force init() if target_config wasn't set (BROM path)
++            self.info("Sunmi V2 fix: target_config None, forcing preloader.init()")
++            mtk.preloader.init(directory=directory)
++            if mtk.config.target_config is None:
++                self.info("Please disconnect, start mtkclient and reconnect.")
++                return None
+         return mtk
+ 
+     def configure_da(self, mtk):
 diff --git a/mtkclient/Library/Port.py b/mtkclient/Library/Port.py
-index 8e2a58f..d7d600a 100644
+index 8e2a58f..69df65d 100644
 --- a/mtkclient/Library/Port.py
 +++ b/mtkclient/Library/Port.py
 @@ -69,10 +69,18 @@ class Port(metaclass=LogBase):
@@ -22,3 +41,28 @@ index 8e2a58f..d7d600a 100644
                      if len(v) == 1 and v[0] == ~(startcmd[i]) & 0xFF:
                          i += 1
                      else:
+@@ -125,7 +133,7 @@ class Port(metaclass=LogBase):
+                 pass
+         return False
+ 
+-    def run_handshake(self, retries=5):
++    def run_handshake(self, retries=50):
+         ep_out = self.cdc.EP_OUT.write
+         ep_in = self.cdc.EP_IN.read
+         maxinsize = self.cdc.EP_IN.wMaxPacketSize
+@@ -140,6 +148,15 @@ class Port(metaclass=LogBase):
+         if self.cdc.pid not in brom_pids:
+             ep_out(b"\xa0")  # Send first byte separately if needed
+ 
++        # Sunmi V2 fix: aggressive initial buffer drain for BROM in unstable state
++        try:
++            for _ in range(20):
++                v = ep_in(maxinsize, timeout=50)
++                if not v:
++                    break
++        except Exception:
++            pass
++
+         for attempt in range(retries):
+             received = b""
+             try:

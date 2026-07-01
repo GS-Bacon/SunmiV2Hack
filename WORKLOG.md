@@ -10,6 +10,80 @@
 
 ---
 
+## 2026-07-02 02:00 (main) — G-7 復旧試行続行、決定的な診断結果: BROM handshake handler が動いていない
+
+### 変更概要
+
+前回セッションから続けて G-7 復旧に挑戦。mtkclient、SPFT V5、pyusb 直接コマンドを試し、**決定的な診断結果**を得た: **BROM は enumerate してるが BROM software が動作していない**。
+
+### やったこと
+
+1. **mtkclient handshake retry 50 回に patch**、`--stock`、`--crash crash`、`--preloader`、`--ptype kamakiri --var1 0xb4` 明示 → 一度だけ成功、subsequent 全部失敗
+2. **mtk_da_handler.py の target_config None 時 force init patch** → handshake は呼ばれるようになったが handshake そのものが通らず
+3. **USB port authorize/unbind/reset via sysfs** → 効果なし(kernel 側は正常、device 側が問題)
+4. **SPFT V5 で BROM 経由 LK 書き戻し試行** → USB enumerate は認識(`/dev/ttyACM0` 作成)、しかし `Connect BROM failed: STATUS_ERR (-1073676287)`
+5. **★ pyusb で直接 CDC bulk endpoints (0x01/0x81) 叩いて BROM handshake bytes 送信** → 送った `0xa0` が **そのまま echo で返る**(inverted の `0x5f` にならない)
+
+### ★★★ 決定的発見: BROM software が起動していない
+
+pyusb 直接コマンドで判明:
+
+```
+sent 0xa0 -> recv 0xa0 (expected 0x5f) ✗
+```
+
+MTK BROM protocol は「host が送った byte を bitwise-NOT で echo」する(`a0 → 5f`, `0a → f5`)。今回は **そのまま返ってきている** = **BROM handshake handler が走っていない、CDC-ACM の生 loopback 状態**。
+
+これは次を意味する:
+- 端末は USB を enumerate するところまでは行くが、**BROM software layer が起動していない**
+- SoC は電源投入されているが、boot ROM の実行状態が不定
+- BROM の初期化コードが何らかの early-boot fault で完了せず、CDC-ACM だけが USB layer で稼働
+- → **USB 側からの復旧経路が全て塞がる**(handshake handler が居ないので mtkclient/SPFT が絶対通らない)
+
+### なぜこうなったか(推測)
+
+- 最初の crash mode 成功時: BROM が完全動作、Kamakiri exploit 適用、Target Config 抽出成功
+- その後: kamakiri stage 1 payload を実行しかけて途中で timeout / disconnect
+- **BROM 内部で「stage 1 payload の実行 flag」が set されたまま**残った可能性
+- 電源リセット無しでは flag が clear されず、BROM が「既に stage 1 に jump した」判定で initialization を skip
+- 以降、BROM 初期化未完了 = handshake handler 未起動 = CDC-ACM loopback だけ動作
+
+### 現状の状態評価
+
+- **端末**: 電源 ON、SoC 生存、USB enumerate 動作(0e8d:0003 として認識)
+- **BROM software**: 未起動、handshake 応答無し
+- **物理的損傷**: 無し(内部 flag 問題)
+- **復旧経路**:
+  - SoC 電源完全 OFF が必須(USB 給電下では SRAM が保持される可能性)
+  - 完全放電まで放置 = brick リスク(user の指摘)
+  - 部分放電 3-8 時間 = 妥当な狙い
+  - バッテリーコネクタ物理切断 = 分解含む
+- **git 状態**: G-0〜G-6 と G-7 の学びは全て push 済み(`6ff87bc`)、失っていない
+
+### 主な変更ファイル
+
+- `tools/mtkclient/mtkclient/Library/Port.py` — READY drain + 50 retries + timeout 100ms patch(patch/ 側にも保存済み)
+- `tools/mtkclient/mtkclient/Library/DA/mtk_da_handler.py` — target_config None 時 force init patch(新規)
+
+### 次のTODO(次回セッション)
+
+1. **端末を USB から抜いて 3-8 時間放置** — SoC state 完全リセット(バッテリー継続、完全放電まで行かない)
+2. 復旧後、mtkclient で **fresh state から crash mode → 即 w lk で純正 LK 書き戻し**
+3. G-7 next attack:
+   - patched LK の signature 部分も含めて **完全な signed patched LK 作成** の RE 検討
+   - もしくは seccfg unlock 状態で boot する **LK 内の unlock-state check を Ghidra で特定 → patch**
+   - もしくは K-touch i9 (MT6739 LineageOS 17.0) の LK を直接焼く実験
+4. mtk_da_handler.py への force-init patch を patches/ 側にも保存(再現用)
+
+### 学び
+
+- **不可逆 flash は必ず「一発で戻せる復旧手順」を事前に用意する**。今回は復旧経路(SPFT + auth)を想定していたが、bootloop 状態で USB replug 時間が足りず途中断念、そこから復旧経路が壊れた
+- **BROM は完全な hardware reset を除いて "使い捨て resource"**。最初の crash mode 成功が唯一の機会だった可能性
+- **USB pyusb 直接コマンドは診断の最終手段として非常に強力**。mtkclient/SPFT の抽象化を剥がして、raw で bytes を送って BROM の実応答を見れば「なぜ動かないか」が確定する
+- **user の USB PD 完全放電リスクの指摘は正しい**。今日の教訓、次回は「部分放電 + 加速待機」の時間感覚を身に付ける
+
+---
+
 ## 2026-07-02 01:20 (main) — G-7 patched LK 焼き試行 → 予想通り bootloop、復旧未完了、区切り
 
 ### 変更概要
