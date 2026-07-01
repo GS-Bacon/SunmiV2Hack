@@ -10,6 +10,88 @@
 
 ---
 
+## 2026-07-02 01:20 (main) — G-7 patched LK 焼き試行 → 予想通り bootloop、復旧未完了、区切り
+
+### 変更概要
+
+G-4/5/6 の勝利に続けて G-7(patched LK 焼き + boot 実験)に突撃したが、preloader は patched LK を rejected → bootloop、復旧作業も途中で mtkclient handshake が通らなくなった状態で今日は区切り。device は BROM に居るので復旧は明日 fresh state で可能。
+
+### G-7 の実験と結果
+
+1. **1MB padded patched LK 焼き成功**(SHA256 verify OK)
+2. **Boot 試験 → bootloop**(0e8d:2000 preloader ↔ 切断の反復、F-5 と同じ症状)
+   - 予想通り、preloader の LK verify が patched LK を拒否
+3. **seccfg unlock 単独試験**(patched LK 焼き前):
+   - mtkclient `da seccfg unlock` で offset 0x0C: `01` → `03` に変更、Sej HW crypto で hash 再計算
+   - reboot → **0e8d:20ff (META mode)** に落ちる、Android 起動せず
+   - 発見: **Sunmi 純正 LK は unlocked seccfg で "安全側" に META に落ちる実装**
+4. **復旧作業**:
+   - 純正 seccfg 書き戻し成功(SHA256 一致)
+   - 純正 LK 書き戻しは bootloop に阻まれて未完了
+   - device が 0e8d:0003 BROM に落ちて、mtkclient crash mode で 1 回だけ Target Config extract 成功
+
+### ★ BROM Target Config で判明した新事実
+
+MT6739 の BROM 自身は **chip level で全 auth disabled**:
+
+```
+SBC enabled: False
+SLA enabled: False  
+DAA enabled: False
+Mem read/write auth: False
+Root cert required: False
+BROM payload addr: 0x100a00
+DA payload addr: 0x201000
+Var1: 0xb4
+```
+
+つまり Sunmi の verify は **BROM ではなく preloader/LK 内部の独自実装**。G-1 で見つけた `fcn.0021277c` の SBC state 変数は eFuse から来るのではなく、preloader が seccfg lock_state + 独自ロジックで初期化している。
+
+**これは前提の書き換えを意味する**: G-4 の「BROM auth 無し」実測は Sunmi 特別ではなく MT6739 全般の chip 特性、Sunmi の防御は完全に preloader/LK 内部にある。
+
+### 復旧未完了の状態
+
+- device: 0e8d:0003 BROM で lsusb 認識
+- mtkclient: 30 分以上試行、preloader.init() が完了せず "Please disconnect, start mtkclient and reconnect" ループ
+- kamakiri var1=0xb4 明示、bundled MT6739 preloader、Port.py patch すべて試したが復旧セッション張れず
+
+推測: BROM 側の内部 state が反復失敗で hardening、fresh state (完全放電 3-8h) 必要
+
+### 主な変更ファイル
+
+- 新規: `logs/experiment-G7-patched-lk-attempt.md` — G-7 の完全レポート、次回復旧手順
+
+### 次のTODO(次のセッション、優先順)
+
+1. **端末を USB 抜いて 3-8 時間放置** → 完全放電で SoC state clear
+2. **復旧**: 
+   - Sunmi Recovery hardware combo(音量+ + 電源 30 秒長押し)
+   - or SP Flash Tool v5.1916 で純正 LK 書き戻し(mtkclient より stable、前回 D-2 で動作実績)
+   - or mtkclient fresh state で再試行
+3. G-7 combined attack(復旧後):
+   - patched LK 焼き + seccfg unlock + **preloader の "unlock state check" を bypass する追加パッチ**
+   - LK 内で「seccfg が unlocked なら META に落ちる」処理をリバース → その分岐を無効化する patch を LK に当てる
+4. G-8 Android 10 port 準備(K-touch i9 device tree 取得等)
+
+### 学び
+
+- **世界初 (mtkclient で secure boot 突破) の直後に世界初 (patched LK bootloop 復旧困難)** = 未踏の道は逆方向にも未踏の困難がある
+- **prelooder verify の攻撃と unlock state check の攻撃は別**:
+  - preloader verify = patched LK が signature 不一致で拒否される問題(F-5 と同じ)
+  - unlock state check = LK 内で seccfg unlocked を安全側判定 = 別の check、別の突破が必要
+  - G-1 で見つけた SBC state gatekeeper は preloader verify を制御、LK 内の unlock check は別関数
+- **mtkclient は大きな武器だが session state 管理が繊細**、bootloop 復旧の状況下では詰まりやすい
+- **BROM Target Config 全 False の発見**は G-1 の解釈修正: Sunmi 防御は全て soft-level、chip-level のバイパスは不要だが独自 verify RE がまだ残る
+- **不可逆な焼きは事前に detailed plan と復旧経路を用意**が鉄則。今回は bootloop 復旧を安易に見積もった
+
+### Session status
+
+- G-0 〜 G-6: 完了、勝利記録
+- G-7: 試行 → bootloop、復旧未完了、明日再挑戦
+- G-8: pending
+
+---
+
 ## 2026-07-02 00:20 (main) — G-4 完全勝利: mtkclient + patch 1 個で secure boot chain 完全突破、Sunmi V2 root & Android 上げの道が完全に開通
 
 ### 変更概要
