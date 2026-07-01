@@ -1,0 +1,65 @@
+=== battery ===
+  USB powered: true
+  status: 5
+  level: 100
+=== boot state ===
+1
+alps/full_rlk6580_we_c_m/rlk6580_we_c_m:7.1.1/N6F26Q/1773911932:user/release-keys
+user
+0
+=== dm-verity: mount ===
+/dev/block/dm-0 /system ext4 ro,seclabel,relatime,data=ordered 0 0
+/dev/block/dm-1 /data ext4 rw,seclabel,nosuid,nodev,noatime,noauto_da_alloc,resuid=10010,data=ordered 0 0
+=== dm-verity: dmsetup ===
+/data/local/tmp/e0-preflight.sh[12]: dmsetup: not found
+/data/local/tmp/e0-preflight.sh[13]: dmsetup: not found
+/data/local/tmp/e0-preflight.sh[14]: dmsetup: not found
+/data/local/tmp/e0-preflight.sh[15]: dmsetup: not found
+=== dm-verity: deps ===
+/data/local/tmp/e0-preflight.sh[17]: dmsetup: not found
+=== system partition raw size ===
+2684354560
+=== recovery-from-boot files ===
+-rw-r--r-- 1 root root 13493601 2009-01-01 01:00 /system/recovery-from-boot.p
+ls: /system/etc/install-recovery.sh: No such file or directory
+-rwxr-xr-x 1 root shell 156296 2009-01-01 01:00 /system/bin/applypatch
+=== install-recovery.sh content ===
+=== all recovery-from-boot related files ===
+/system/bin/applypatch
+/system/bin/install-recovery.sh
+/system/recovery-from-boot.p
+=== install-recovery.sh content ===
+#!/system/bin/sh
+if ! applypatch -c EMMC:/dev/block/platform/bootdevice/by-name/recovery:24507264:bf1869087abd8b6bdc72f2f78a34614b000e1556; then
+  applypatch -b /system/etc/recovery-resource.dat EMMC:/dev/block/platform/bootdevice/by-name/boot:9802624:09db35e1ed1a9cbf13ededb9a306bb0f0133bc60 EMMC:/dev/block/platform/bootdevice/by-name/recovery bf1869087abd8b6bdc72f2f78a34614b000e1556 24507264 09db35e1ed1a9cbf13ededb9a306bb0f0133bc60:/system/recovery-from-boot.p && log -t recovery "Installing new recovery image: succeeded" || log -t recovery "Installing new recovery image: failed"
+else
+  log -t recovery "Recovery image already installed"
+fi
+=== search for dmsetup and busybox ===
+/system/bin/toybox
+/system/bin/toybox
+=== ls /system/bin/ | head to see what tools are there ===
+dmesg
+idmap
+mount
+mountpoint
+umount
+=== /sys entries for dm ===
+cpu_dma_latency
+device-mapper
+alignment_offset
+bdi
+capability
+dev
+discard_alignment
+dm
+ext_range
+fec
+holders
+inflight
+=== kernel dm-verity dm_verity params ===
+prefetch_cluster
+262144
+=== recovery-from-boot.p first 32 bytes ===
+   I   M   G   D   I   F   F   2 003  \0  \0  \0  \0  \0  \0  \0
+  \0  \0  \0  \0  \0  \0  \0  \0  \n   H   v  \0  \0  \0  \0  \0

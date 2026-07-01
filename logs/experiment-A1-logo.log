@@ -1,0 +1,27 @@
+# Phase A-1: logo partition write verify test
+# Executed: 2026-07-01T19:18:11+09:00
+
+## Objective
+Determine whether Sunmi LK verifies logo partition (mmcblk0p28, 8MB).
+
+## Method
+- Copy dump/logo.img
+- Modify last byte: 0x00 -> 0xFF (safe zone, trailing zeros)
+- Flash to /dev/block/platform/bootdevice/by-name/logo via mtk-su + dd
+- Verify write with re-dump SHA256
+- Reboot, measure time to boot_completed=1
+
+## Results
+- Original logo.img SHA256: b110cbdbd4bd4e4879e7e68898fc3bbb4398911bcda50c45c74a14a2e24c6e87
+- Modified logo SHA256:     d3736b1bef448bce3e1a631b716a4f954ce0385615ffc66c5c5898680af67921
+- After-write SHA256:        d3736b1bef448bce3e1a631b716a4f954ce0385615ffc66c5c5898680af67921 (match)
+- Write dd: 8388608 bytes in 1.613s
+- boot_completed=1 after 51s reboot
+- adb device online, standard fingerprint
+- Sunmi LK did NOT reject modified logo
+
+## Conclusion
+Sunmi LK does NOT verify logo partition. Non-critical / cosmetic partitions can be written freely.
+
+## Next
+Proceed to Phase A-2 (system 1-byte modification).

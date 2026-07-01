@@ -10,6 +10,73 @@
 
 ---
 
+## 2026-07-01 21:30 (main) — Downgrade + LK パッチまで実装、Sunmi の Secure Boot Chain 完全実装で全ソフト経路潰し、撤退決定
+
+### 変更概要
+
+Downgrade + Magisk 経路(D-3)、dm-verity バイパス下調べ(E-0)、LK バイナリパッチ経路(C1 = F-x)まで実装・実測。全経路で **ソフト経由の永続 root / Android 上げは実質不可能**と実機確定。
+
+### 判明した Sunmi V2 T5930 の防御階層(実測)
+
+1. **AVB1 (LK)**: Magisk-patched boot を必ず蹴る(D-3 で bootloop 実証済み)
+2. **dm-verity (kernel)**: fstab "verify" flag、system は /dev/block/dm-0 経由でマウント
+3. **自動 boot 復旧 (Sunmi LK 内部実装)**: **電源長押しで Sunmi Recovery 発動 → factory reset + 純正 boot 復元**(D-3 後の実測)
+4. **DAA (Download Agent Authentication)**: **preloader が LK の signature を verify**(F-5 実測、パッチ LK は preloader に蹴られて起動不能)
+5. **BROM verify**: preloader を verify(BROM 直触りは不可、preloader も触れない)
+
+**5 層すべてが機能して連動**しており、いずれか一つを突破しても他が塞ぐ完全な構造。
+
+### 試した経路と結果(1 行サマリ)
+
+- **D-1**: SP Flash Tool v5 + auth_sv5.auth + BROM 進入 → **完全成功**、経路は生きている
+- **D-2**: logo 部分焼き → 成功、SGPT/PGPT も自動書き換え(副作用、GPT ずれ)
+- **D-3 v1**: FormatExcept_BL → err 8400(NVRAM 位置特定失敗、GPT ずれのため)
+- **D-3 v2**: FormatAll → S_TIMEOUT(端末が META mode に落ち BROM 拾えず)→ 電源長押し → Sunmi 自動復旧発動で 2.12.1 stock 復活
+- **E-0**: dmsetup が端末に無い、install-recovery.sh は AOSP 標準の recovery 復元 script で boot 復旧には関与しないと判明
+- **F-0/1/2/3**: lkpatcher で LK policy patch 1 個成功(7 個中 1 個、Security Policy Table を全 0 化)
+- **F-4**: patched LK 焼き成功、SGPT/PGPT 副作用なし(pgpt を rom-list で明示 disable が効いた)
+- **F-5**: **preloader が LK verify で拒否 → パッチ LK 起動不能**、C1 経路詰み確定
+- **F-6 cert-bypass**: lkpatcher の cert-bypass は Sunmi V2 LK には効かない(`nothing needed re-signing` = 対象 cert 形式が含まれない)
+
+### 副次的に得た学び(次回の投資)
+
+- **SP Flash Tool v5.1916 + auth_sv5.auth 経路は完全動作** → 万一のブリック時の復旧手段として最強
+- **BROM 進入は物理ボタン一切不要**、電源 OFF から USB 挿すだけ(dafish7 手順の再現)
+- MediaTek の各 USB モード判別: `0e8d:0003` BROM / `0e8d:2000` Preloader / `0e8d:2008` Cyrus Preloader / `0e8d:20ff` META / `0e8d:201d` Android
+- **lkpatcher の内部仕様**: `--patch-policies --cert-bypass` を同時指定すると cert-bypass 側が「未パッチ元イメージ」を見て動作しない、段階分けが必要
+- Sunmi V2 の Policy Table offset は `0x6c340`
+- Sunmi の 「Recovery the system」は factory reset + boot 復元、電源長押しでも trigger される
+
+### 撤退判定
+
+**ソフト経路全て実測で潰した**。残る候補:
+
+- 物理経路: test point 経由 BROM(基板分解、破壊リスク)→ hobby 範囲外
+- 手動 Ghidra 逆解析で LK 全体解析 + preloader 逆解析 → 数日〜数週間コース、成功率 5% 未満
+
+**撤退、Flutter kiosk 化に戻る**が総合的に最適解。目的(カメラ+タッチ+プリンタ kiosk)は Android 7.1 + mtk-su ベースで 100% 達成できる。
+
+### 新規ファイル
+
+- `docs/all-remaining-avenues.md` — 全経路の網羅整理(潰したもの + 残るもの)
+- `docs/downgrade-magisk-plan.md` — D 経路(2021 版 downgrade + Magisk)のプラン
+- `docs/recovery-from-boot-bypass-plan.md` — 元 recovery-from-boot 無効化プラン、F 経路(LK パッチ)に上書き
+- `docs/system-swap-experiment-plan.md` — 初期の system 差し替え実験プラン(未実行、撤退候補)
+- `logs/downgrade-D0-firmware-sha256.log`
+- `logs/downgrade-D2-logotest.log`
+- `logs/experiment-A1-logo.log` — Phase A-1 (logo 書き換え verify テスト成功)
+- `logs/experiment-E0-preflight.log`
+
+### 次のTODO(次のセッション)
+
+1. **端末復旧**: 純正 LK (dump/lk.img) を SP Flash Tool で焼き戻す(未実行のまま、電源 OFF + USB でBROM 進入して焼く、5 分)
+2. Sunmi 剥がしを再適用(disable-user 17 個)
+3. Flutter で kiosk アプリの雛形作成(`~/SunmiV2Hack/app/`)
+4. flutter_sunmi_printer + camera パッケージ導入
+5. AndroidManifest に CATEGORY_HOME 追加、Sunmi Launcher (com.woyou.launcher) を disable
+
+---
+
 ## 2026-07-01 18:40 (main) — Sunmi Recovery "Recovery the system" で復旧成功、方針転換
 
 ### 変更概要

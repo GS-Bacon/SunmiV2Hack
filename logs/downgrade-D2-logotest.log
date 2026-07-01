@@ -1,0 +1,45 @@
+# Phase D-2: SP Flash Tool + auth 疎通確認(logo だけ焼き試行)
+# Executed: 2026-07-01 20:00 頃
+
+## Objective
+- SP Flash Tool v5.1916.00 + auth_sv5.auth + fishybytes 2021 firmware で Sunmi V2 の Preloader/BROM と通信できるかを確認
+- logo だけ焼く rom-list で疎通と焼き成否を測定
+
+## Config used
+- `tools/firmware/spft-config-logo-only.xml`
+- rom-list に index 29 (logo) のみ enable
+- <da-download-all/> だけの commands(<format> は無し)
+
+## Method
+1. v5 flash_tool を bg 起動、`Search usb, timeout set as 60000 ms`(端末待機)
+2. 端末を電源長押しで shutdown、USB 抜いて挿し直す(ボタン一切押さない、dafish7 手順)
+3. flash_tool の進捗をログ観察
+
+## Result
+
+- **BROM 進入成功** (0e8d:0003 相当、SP Flash Tool は BROM としてハンドシェイクした)
+  - 今日ずっと BROM 進入不可と思っていたが、実は「電源 OFF + USB 挿すだけ」で入っていた
+  - 音量ボタン系のコンビは Recovery/META mode に誘導していただけ
+- DA (Download Agent) 100% 転送成功
+- auth_sv5.auth 認証成功(明示エラー無し)
+- **Stage: SGPT** — Secondary GPT 書き込み(16.50 KB)完了
+- **Stage: PGPT** — Primary GPT 書き込み完了
+- **[29] WRITE TO PARTITION [ logo ]** — logo 書き込み 8MB 完了 (14.03 MB/s)
+- `Download Succeeded` → `Disconnect`
+
+## Aftermath
+
+- 端末は焼き完了後 automatic reboot しない設定(config.xml に <reboot> 無し、-b オプションも無し)
+- 電源ボタン押しで起動しようとしても **起動しない** ← 想定外
+- 推定原因: **SGPT/PGPT が 2021 版 fishybytes の GPT で上書きされたが、他パーティション(boot/system/etc)は現在の 2.12.1 のまま = GPT と実データの位置が食い違い、bootloader がパーティションを見つけられない**
+
+## Confirmed capabilities (large win despite bootloop)
+
+1. **SP Flash Tool + auth 経路が完全に生きている** — mtkclient が全滅したのは auth 送っていなかっただけ
+2. **BROM 進入は「電源 OFF + USB のみ」で成功する** — 今日の物理コンボ全滅は誤誘導
+3. **fishybytes firmware (2021 版) の DA と scatter は Sunmi V2 T5930 現行機で通用**
+
+## Next
+
+Phase D-3 (Format all + Download + Magisk-patched boot 置き換え) を実行。
+GPT ずれは D-3 の Format all で全パーティション整合的に上書きされることで解消する見込み。
