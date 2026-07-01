@@ -1,0 +1,129 @@
+# LK Patch v2: seccfg + SEC_POLICY wrapper 短絡 (10 バイト)
+
+## Track G の追加発見と Track D の限界
+
+Track D(`lk-seccfg-shortcut.patch`)は **`FUN_5603b2ec` (seccfg lock_state reader) を短絡** する 2 バイト patch。META boot 分岐を回避する目的。
+
+Track G で LK 内 image auth を Ghidra 追加解析した結果、**LK 内部にも preloader と同じ設計の SEC_POLICY-driven auth chain がある**ことが判明:
+
+```
+LK boot flow
+    ↓
+cert_chain_verify (FUN_56038388)
+    ↓
+FUN_5601a7e0 (12 バイト gate wrapper, return (SEC_POLICY_reader() >> 1) & 1)
+    ↓
+FUN_5601a6a8 (SEC_POLICY_reader, 160 バイト)
+    ↓
+FUN_5603a37c → FUN_5603a2d0 (SBC state gatekeeper, LK 内部)
+    +
+FUN_5603b2ec (seccfg lock_state reader) — Track D 対象
+```
+
+**cert chain verify の gate は FUN_5601a7e0 の返り値**:
+
+```c
+// LK cert_chain_verify (FUN_56038388)
+iVar4 = FUN_5601a7e0(partition_index);
+if (iVar4 == 0) {
+    // policy 値 bit 1 が 0 = cert verify SKIP
+} else {
+    iVar5 = FUN_5603a54c(...);  // 実際の cert verify
+    if (iVar5 != 0) halt();
+}
+```
+
+同じ `08 b5 ff f7` バイト列で始まる 12 バイト stub が 2 個ある:
+
+| 関数 | サイズ | 内容 |
+|---|---|---|
+| `FUN_5601a7e0` | 12 バイト | `return (SEC_POLICY_reader() >> 1) & 1` — bit 1 抽出 |
+| `FUN_5601a7ec` | 12 バイト | `return SEC_POLICY_reader() & 1` — bit 0 抽出 |
+
+これは **preloader の FUN_0020f9b0 と完全に同じ設計 pattern**。同じ 4-byte 短絡パッチが両方に適用可能。
+
+## v2 patch(Track D + Track G 統合、合計 10 バイト)
+
+### Patch 1: Track D 継承 — `FUN_5603b2ec` (seccfg lock_state reader) 短絡
+
+| lk.img offset | Original | Patched | 命令 |
+|---|---|---|---|
+| 0x3b4f4 | `1b b9` | `00 bf` | CBNZ r3, +6 → NOP.n |
+
+### Patch 2: Track G-1 — `FUN_5601a7e0` (SEC_POLICY bit-1 wrapper) 短絡
+
+| lk.img offset | Original | Patched | 命令 |
+|---|---|---|---|
+| 0x1a9e0 | `08 b5` | `00 20` | push {r3, lr} → movs r0, #0 |
+| 0x1a9e2 | `ff f7` | `70 47` | bl 0x5601a6a8 (先頭) → bx lr |
+
+### Patch 3: Track G-2 — `FUN_5601a7ec` (SEC_POLICY bit-0 wrapper) 短絡
+
+| lk.img offset | Original | Patched | 命令 |
+|---|---|---|---|
+| 0x1a9ec | `08 b5` | `00 20` | push {r3, lr} → movs r0, #0 |
+| 0x1a9ee | `ff f7` | `70 47` | bl 0x5601a6a8 (先頭) → bx lr |
+
+## 想定効果
+
+- `FUN_5601a7e0` 常に return 0 → **cert_chain_verify(FUN_56038388)が常に skip 経路**、patched boot.img でも cert 検証 skip
+- `FUN_5601a7ec` 常に return 0 → SEC_POLICY bit 0 経由の他の check(image_hash_verify や dm_cert)も skip
+- Track D 継承の `FUN_5603b2ec` 短絡 → seccfg unlock 検出無効化、META boot 回避
+
+## 検証
+
+- Patched size: 1048576 bytes (1 MB、変わらず)
+- Byte diff: 正確に 10 バイト
+- Original SHA256: `fa9e3290118ed58d331d41a37050f59e9eeab203f570487f8d8c8e022a860926`
+- **v2 Patched SHA256**: `c33e893a10f6c38128aacef2912954b1ce737c67993d07af04b262823a28ec50`
+- Track D only Patched SHA256: `4d70cd923678b952f733424832f43cc532c1b301781440817afdc2b9460c1381`
+
+## Track D との関係
+
+Track D の `lk-seccfg-shortcut.img`(SHA256 `4d70cd92...`)は本 v2 の subset。**v2 を優先して使う**。Track D は「seccfg check だけ興味がある場合の参考実装」として残す。
+
+## 更新した完全 chain(Track F v2 preloader + Track G v2 LK)
+
+```
+[段 1: BROM auth]                   = OK (chip-level 全 False)
+[段 2: preloader SBC USB]           = preloader-image-auth-disable Track F patch 1
+[段 3: preloader image_auth]        = preloader-image-auth-disable Track F patch 2
+[段 4: LK seccfg META check]        = lk-full-shortcut Track D 継承
+[段 5-1: LK cert_chain_verify]      = lk-full-shortcut Track G-1(新規)
+[段 5-2: LK image_hash / dm_cert]   = lk-full-shortcut Track G-2(新規)
+```
+
+段 1-5 全部の gate を無効化。理論上、patched LK + patched preloader + 純正 boot.img で通常 boot が通る。加えて Magisk-patched boot.img でも通る可能性が高い(D-3 で bootloop していたもの)。
+
+## 想定される残る壁(段 6 以降、未確認)
+
+- **dm-verity**(kernel level, /system の block hash chain): LK は関与しない、kernel が起動後 mount 時に check → verify command line arg で無効化する必要あり
+- **AVB1 (Android Verified Boot)**: boot.img の header に埋め込まれた signature、LK が検査。SEC_POLICY 経由の cert 検査を skip すれば通るはず(要実験)
+- **ATF / TEE レイヤ**: 該当 partition が verify されない場合、boot は続くが tee サービスが起動しない可能性
+
+これらは Track G の範囲外。実験でのみ判明。
+
+## 適用手順(復旧後)
+
+**Order A(推奨、慎重)**:
+1. まず LK v2(本 patch)のみ焼き試験(reversible)
+2. preloader が verify で reject → bootloop → 想定通り、preloader 側 patch(Track F v2)も必要と判明
+3. LK v2 + preloader v2 焼き
+
+**Order B(即断)**:
+1. LK v2 + preloader v2 同時焼き、brick リスク 2 倍
+
+## 適用 script
+
+```bash
+sudo -E ./patches/apply-lk-full-shortcut.sh apply
+sudo -E ./patches/apply-lk-full-shortcut.sh rollback
+```
+
+## Ref
+
+- `logs/experiment-G8-lk-ghidra.md` — Ghidra 初期解析
+- `scratch/g8-lk-recon/ghidra-lk-imageauth.txt` — LK image auth chain 全 dump
+- `scratch/g8-lk-recon/ghidra-lk-authfn-detail.txt` — SEC_POLICY wrapper detail
+- `patches/lk-seccfg-shortcut.patch` — Track D(subset)
+- `patches/preloader-image-auth-disable.patch` — Track F v2(preloader gate)

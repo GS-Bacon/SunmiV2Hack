@@ -10,6 +10,126 @@
 
 ---
 
+## 2026-07-02 03:30 (main) — G-8 Track G: LK 内も preloader と同型の SEC_POLICY gate、10 バイト LK v2 で全 chain 完成
+
+### 変更概要
+
+Track G で LK 内部の image auth chain を Ghidra で追加解析し、**preloader の FUN_0020f9b0 と完全に同じ 12 バイト gate wrapper が LK 内にも 2 個存在**することが判明。Track D + Track G を統合した **10 バイト LK patch v2** を生成。preloader Track F v2 + LK Track G v2 の組み合わせで **段 1-5 全 auth gate を無効化**する chain が完成。
+
+### ★★★ 決定的発見: LK の cert chain verify も SEC_POLICY-driven
+
+Ghidra decompile で確認された chain:
+
+```
+cert_chain_verify (FUN_56038388, 224 バイト)
+    ↓ 呼び出し
+FUN_5601a7e0 (12 バイト gate wrapper)
+    ↓ 内容
+return (SEC_POLICY_reader() >> 1) & 1;  // ★ preloader の FUN_0020f9b0 と設計 100% 一致
+```
+
+**同じ 4-byte 短絡 patch(`08 b5 ff f7` → `00 20 70 47`)が両方に効く**。
+
+LK 内には 2 個の同型 wrapper stub:
+
+| 関数 | サイズ | 用途 |
+|---|---|---|
+| `FUN_5601a7e0` | 12 バイト | cert_chain_verify の gate(bit 1 抽出)|
+| `FUN_5601a7ec` | 12 バイト | 他 auth check の gate(bit 0 抽出)|
+
+### v2 LK patch(合計 10 バイト = Track D 2 + Track G 8)
+
+**Patch 1 (Track D 継承)**: `FUN_5603b2ec` (seccfg reader) → CBNZ を NOP
+
+| lk.img offset | Original | Patched |
+|---|---|---|
+| 0x3b4f4 | `1b b9` | `00 bf` |
+
+**Patch 2 (Track G-1 新規)**: `FUN_5601a7e0` (bit 1 wrapper) → 常に return 0
+
+| lk.img offset | Original | Patched |
+|---|---|---|
+| 0x1a9e0 | `08 b5` | `00 20` |
+| 0x1a9e2 | `ff f7` | `70 47` |
+
+**Patch 3 (Track G-2 新規)**: `FUN_5601a7ec` (bit 0 wrapper) → 常に return 0
+
+| lk.img offset | Original | Patched |
+|---|---|---|
+| 0x1a9ec | `08 b5` | `00 20` |
+| 0x1a9ee | `ff f7` | `70 47` |
+
+### 検証
+
+- Patched size: 1048576 bytes (1 MB、変わらず)
+- Byte diff: 正確に 10 バイト
+- Original SHA256: `fa9e3290118ed58d331d41a37050f59e9eeab203f570487f8d8c8e022a860926`
+- **v2 Patched SHA256**: `c33e893a10f6c38128aacef2912954b1ce737c67993d07af04b262823a28ec50`
+- Track D only SHA256: `4d70cd923678b952f733424832f43cc532c1b301781440817afdc2b9460c1381` (subset)
+
+### ★ 完成した完全 chain(v2 全部)
+
+```
+[段 1: BROM auth]                   OK  (chip-level 全 False)
+[段 2: preloader SBC USB]           patched-preloader Track F-1
+[段 3: preloader image_auth]        patched-preloader Track F-2 (FUN_0020f9b0 短絡)
+[段 4: LK seccfg META check]        patched-lk Track D (FUN_5603b2ec 短絡)
+[段 5-1: LK cert_chain_verify]      patched-lk Track G-1 (FUN_5601a7e0 短絡, 新規)
+[段 5-2: LK image_hash / dm_cert]   patched-lk Track G-2 (FUN_5601a7ec 短絡, 新規)
+```
+
+**理論上、この 2 image (preloader v2 + LK v2) を焼けば**:
+
+- 通常 boot で patched LK が動作
+- LK が cert chain verify を skip → **Magisk-patched boot.img でも通る可能性(D-3 で bootloop したもの)**
+- LK が seccfg unlock 状態でも META boot に落ちない
+- 実 OS Android 上げの道が開通(dm-verity 別問題)
+
+### 残る潜在的な壁(段 6+ 未確認)
+
+- **dm-verity** (kernel level, /system の block hash): LK は関与しない、kernel が起動後 mount 時に check → verify command line arg で無効化必要
+- **AVB1 (Android Verified Boot)**: boot.img header の signature。SEC_POLICY 経由の cert check を skip すれば通るはず(要実験)
+- **ATF / TEE**: LK が tee1/tee2 partition を verify → skip すれば boot は続くが TEE service 起動しない可能性
+
+### 主な変更ファイル
+
+- 新規: `scratch/lk-patch/lk-full-shortcut.img` — v2 patched LK (SHA256 上記)
+- 新規: `patches/lk-full-shortcut.patch` — v2 完全 documentation
+- 新規: `patches/apply-lk-full-shortcut.sh` — v2 flash script (SHA256 verify 内蔵)
+- 新規: `scratch/g8-lk-recon/ghidra-lk-imageauth.txt` — LK image auth chain 全 dump (700 行)
+- 新規: `scratch/g8-lk-recon/ghidra-lk-authfn-detail.txt` — LK SEC_POLICY wrapper + 主要 auth fn の完全 dump
+- 新規: `scratch/g8-lk-recon/ghidra-scripts/LKImageAuthAnalysis.py`
+- 新規: `scratch/g8-lk-recon/ghidra-scripts/DumpLKAuthFns.py`
+- 継続: `patches/lk-seccfg-shortcut.patch` — Track D、subset として残置
+
+### 復旧後の実験順序(推奨)
+
+**Order A(慎重、段階的)**:
+1. LK v2 patch のみ焼く(reversible)、boot 動作確認
+2. 純正 preloader が LK v2 を verify で reject → bootloop → 段 3 の壁と確定
+3. Track F v2 preloader も焼く(brick リスク)
+4. 純正 boot.img → 動作確認 → OK なら Magisk-patched boot.img でリトライ
+
+**Order B(即断)**:
+1. Track F v2 preloader + Track G v2 LK 同時焼き、実験結果を最速化
+
+### 教訓・学び
+
+- **Sunmi の secure boot chain は preloader と LK で完全に同一設計**。同じ SEC_POLICY 判定 pattern、同じ 12 バイト gate wrapper stub、同じ 0x11/0x22/0 SBC state gatekeeper。**RE workflow が完全に流用可能**
+- **G-7 の bootloop 原因は 4-5 段の複合防御**だった。preloader の signature verify だけと思い込んでいた前提は誤り、実際は preloader gate + LK gate の両方が同時に働く 2 段構造
+- **`08 b5 ff f7` から始まる 12 バイト gate stub は Sunmi/MediaTek 共通の設計パターン**。今後同種プロジェクトで同じ pattern を grep するだけで attack point を即座に発見できる
+- **1200 関数の LK と 500 関数の preloader を各々 30 秒で auto-analyze でき、Jython PostScript で xref chain を全 dump できる Ghidra headless workflow が、この規模の RE を短時間で完遂可能にした**
+
+### 次のTODO(復旧後の実験順)
+
+1. **端末復旧**(引き続き放置または物理切断)
+2. Order A で段階的焼き試験
+3. dm-verity 対策(kernel command line 経由の verify off)
+4. AVB1 対策(必要なら追加 patch)
+5. K-touch i9 LK は現時点で不要になった(Track F+G で Sunmi 純正で通る予定)
+
+---
+
 ## 2026-07-02 03:20 (main) — G-8 Track F: image_auth_main の gate は fcn.0021277c ではないと判明、Track C を v2 に修正
 
 ### 変更概要
