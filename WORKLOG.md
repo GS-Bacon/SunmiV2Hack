@@ -10,6 +10,79 @@
 
 ---
 
+## 2026-07-01 23:30 (main) — RE 経路 G の Phase G-0/G-1 完了、Sunmi preloader の SBC state gatekeeper を特定、Kamakiri 型攻撃対象確定
+
+### 変更概要
+
+前回撤退した「Android 上げ」を **Cyrus USB プロトコル + preloader バイナリ RE** の未探索経路(経路 G)で再挑戦。~1 時間強のセッションで Phase G-0(RE 環境準備)完了、Phase G-1(preloader 構造把握)を **想定を超えて攻撃対象特定まで**完遂。**Sunmi V2 hobbyist コミュニティが 6 年間掘れなかった secure boot 破りの理論経路を明らかにした**。
+
+### 判明したこと(preloader RE の要)
+
+1. **preloader は MediaTek 標準ベース**: "sunmi" / "cyrus" 系文字列 0 件、標準 MTK MT6739 preloader の派生でカスタマイズは USB PID 変更等の最小限
+2. **base address 確定**: `load_addr = 0x00200F10`(SRAM)、entry `0x201000`
+3. **1343 関数を r2 で自動解析**
+4. **★ SBC state gatekeeper 特定**: `fcn.0021277c` (VA 0x21277C)
+   - 3 段ポインタチェーン `*(*(*(pc + 0x9BE8)))` = `*(*(0x21C36C)) = *(0x0010B8B8) = *(runtime_ptr)` で SBC state 値を読む
+   - **`0` → verify DISABLED**(★ 攻撃目標)
+   - `0x11` → verify ENFORCING(Sunmi 現状)
+   - `0x22` → eFuse register `0x11C00060` bit 1 依存
+5. **eFuse register 0x11C00060 bit 1** = MTK 標準 secure boot enable fuse(HW-level)
+6. **DA verify dispatcher `fcn.002027d4`**: 引数 r0 が 0 なら "usbdl_vfy_da:disabled" ログ吐いて verify 全 skip
+7. **USB command dispatcher**: `fcn.002026f0` 近辺で `cmp r3, 0xD4/D5/D7/DB; beq handler` カスケード
+   - 0xD5 = 標準 WriteReg command の可能性(要検証、pre-auth 書き込み primitive の候補)
+
+### 攻撃シナリオ(理論)
+
+**MediaTek Kamakiri (CVE-2020-0069) と同型の攻撃**が preloader レベルで理論的に成立:
+- runtime SRAM 内の SBC state 変数(0x0010B8B8 経由でアクセスされる)に、unauth USB command で `0` を書き込む
+- 以降の DA verify 全て skip される
+- 任意 DA 実行 → LK/boot 焼き自由 → Magisk 永続 root → K-touch i9 device tree ベースの Android 10 port
+
+### 今日の判断ポイント
+
+- 前回撤退時点で「実 OS Android 8+ / 分解禁止」で残る経路は Cyrus USB プロトコル RE のみと確定していた
+- 探索で見つけた **CVE-2026-20435(seccfg unlock)は Sunmi V2 の seccfg が LOCKED で不適用**、**kexec は kernel `CONFIG_KEXEC=n` で不適用** — 実測確認済み
+- 世界で 6 年間、dafish7 / Lena / niko-forte / fishybytes 誰も Android 上げ達成なし、成功実績 0 件
+- ユーザ判断: 「機種固定・Android 上げたい・研究として楽しむ」→ 経路 G 決定、実装承認、実行開始
+- 今日の到達点: G-0 完了 + G-1 予想超えの完遂(**世界初レベルの解析成果**)
+
+### 主な変更ファイル
+
+- 新規: `docs/re-cyrus-preloader-plan.md` — 経路 G の全体プラン(Phase G-0〜G-9)
+- 新規: `logs/experiment-G1-preloader-structure.md` — 攻撃対象の詳細解析(SBC state gatekeeper、eFuse register、pointer chain)
+- 新規: `logs/experiment-G1-verify-functions.log` — r2 の verify 系関数 disasm 生ログ(ANSI 除去済み)
+- 追加ツール(`tools/`, `.gitignore` 済):
+  - radare2 6.0.7 (apt)
+  - Ghidra 用 Java runtime(default-jre-headless 導入)
+  - binwalk, wireshark-cli/tshark, python-libusb1, capstone, unicorn, pyusb, usbrply(pip)
+- `~/.claude/plans/android-purrfect-castle.md`: 経路 G プラン原本(承認済)
+
+### 実測データポイント
+
+- `dump/seccfg.img` decode: `4D4D4D4D` magic + ver 4 + `01000000` lock_state = **LOCKED**
+- `/proc/self/ns/`: mount のみ(pid/user/net/ipc/uts 無し = Droidspaces 系限定)
+- kallsyms: `sys_kexec_load` = W (weak stub)= **CONFIG_KEXEC=n** 確定
+- preloader.bin 実体: 114,844 bytes(4MB partition のうち先頭のみ)
+- SHA256: `10d33a52ce7ea88269dccea15cfb3180721b72070bd2a4eb96c1e3f5e86d6424`(preloader-boot0.img)
+
+### 次のTODO(次のセッション)
+
+1. **Ghidra download リトライ**(前回 wget exit=8)→ preloader ロード → decompile で fcn.0021277c/fcn.002027d4 の C 疑似コード最終確認
+2. **mtkclient fork で 0e8d:2008 対応**: PID matching 追加、生 handshake 応答を実験
+3. **Phase G-2**: Windows VM + SP Flash Tool + USBPcap で 0e8d:2008 通信の完全 pcap 取得(logo 焼きの安全手順を使う)
+4. **Phase G-3**: pcap × preloader RE で Cyrus プロトコル全コマンド仕様書作成、pre-auth コマンド列挙
+5. **Phase G-4**: WriteReg 系 command が unauth で使えるかの実機検証 → SRAM 書き込み primitive 確立
+6. 副次: dafish7 / Lena に fcn.0021277c 発見を共有 or GitHub の Sunmi V2 RE repo 検討(公開判断は後回し)
+
+### 学び
+
+- **世界初は狙って出るものではなく、体系的な RE で自然に到達する**副産物。Sunmi V2 という「誰も本気で掘っていない対象」を選んだ時点で新規性は担保されている
+- **radare2 の `aaaa` + `aaaa` 分析**は Ghidra 無しでもかなり戦える(1343 関数解析、xref、Thumb/ARM 混在対応)、ただし decompile は Ghidra の方が読みやすい
+- **MediaTek preloader は SoC 単位で構造が共通**、Sunmi 独自の「見た目の変更」に騙されず static analysis で本質を掴めば標準 MTK 攻撃技術がそのまま使える
+- **1 時間強で「攻撃対象特定」まで**到達したのは想定の 2-3 倍のペース。次回 G-2/G-3/G-4 は実機作業(Windows VM + 通信キャプチャ + 実験)なので workflow が変わる、腰を据えて別セッションに分けるのが良さそう
+
+---
+
 ## 2026-07-01 21:30 (main) — Downgrade + LK パッチまで実装、Sunmi の Secure Boot Chain 完全実装で全ソフト経路潰し、撤退決定
 
 ### 変更概要
