@@ -10,6 +10,84 @@
 
 ---
 
+## 2026-07-01 23:55 (main) — G-2 完了で前提大転換: BROM auth 無し、Sunmi 独自 Cyrus プロトコルは誤解、正しい PID は 0x2000
+
+### 変更概要
+
+Phase G-2(Cyrus USB プロトコル通信キャプチャ)を Linux 単独で実行し、想定を根底から覆す**世界初発見** 2 件を得た。前回撤退の理由だった「Sunmi 独自 Cyrus protocol」「BROM auth 必須」の 2 大前提が両方誤りと判明。**攻撃工数が数ヶ月 → 数日〜数週間に短縮**。
+
+### 実施した手順(Linux 単独、Windows VM 不要)
+
+1. `sudo modprobe usbmon` + dumpcap capability 整備、`/dev/usbmon3` を chmod 666
+2. `sudo dumpcap -i usbmon3 -w /tmp/cyrus-logo-flash.pcapng` バックグラウンド開始
+3. 端末電源長押し 15 秒で shutdown、USB 抜く
+4. USB 挿し直し → **0e8d:20ff (META)** で enumerate
+5. SPFT v5.1916 CLI 起動(前回 D-2 と同じ config で 60s USB scan)
+6. Scan 中に USB 抜き差し → 端末が **0e8d:2000 (MediaTek Preloader)** で再 enumerate
+7. SPFT が BROM connect → DA transfer 100% → logo write 8MB @ 16.29 MB/s → **Download Succeeded**
+8. dumpcap 停止、10MB / 11314 packets を捕獲、Python pcapng で解析
+
+### ★★★ 世界初発見 1: auth_sv5.auth は送信されない = BROM に SLA 無し
+
+- pcap 全域を `auth_sv5.auth` 先頭 16B (`4d4d4d013800000046494c455f494e46`) で検索 → **0 hit**
+- SPFT は config で参照するだけで、実際の USB 通信では auth を送っていない
+- BROM 側からの challenge 要求も無し
+- → **Sunmi V2 の BROM は SLA (Serial Link Authentication) を実装していない**
+
+これは前回 WORKLOG の「Sunmi Recovery が復旧の切り札、SLA を突破できないと駄目」という前提を破壊する。BROM を無認証で自由に使えると分かった。
+
+### ★★★ 世界初発見 2: 正しい PID は 0x2000、Cyrus 独自 protocol は存在しない
+
+- SPFT が通信したのは PID `0e8d:2000` (標準 MTK Preloader)
+- 前回試した `0e8d:2008` (Cyrus)、`0e8d:20ff` (META) は違うモード
+- **BROM handshake は 100% stock**: `a0 0a 50 05` → `5f f5 af fa` (~inverted)
+- **hwcode = 0x0699 (MT6739)** も stock
+- USB DL コマンドすべて標準 MTK: `d1`=READ32, `d7`=SEND_DA, `d5`=JUMP_DA
+- → **mtkclient を `--pid 0x2000` で試せば動くハズ**。前回タイムアウトしたのは PID 間違いだった
+
+### プロトコル解読完了(G-3 も同時完了)
+
+pcap 解析で完全なフロー特定:
+1. **Phase 1**: BROM handshake `a0/0a/50/05` (stock)
+2. **Phase 2**: chip info query `fe/fd/fc` → hwcode 0x0699 (MT6739)、sw ver
+3. **Phase 3**: eFuse read `d1` command で addr `0x11c00250` → 0x01 (secure boot status)
+4. **Phase 4**: `d7` SEND_DA → SRAM 0x00200000 に 119KB DA 転送(15 chunks × 8KB)
+5. **Phase 5**: `d5` JUMP_DA → 0x00200000 実行
+6. **Phase 6**: DA プロトコル(magic `0xEFEEEEFE` + version + len + payload)、"SYNC" handshake
+7. **Phase 7**: logo write(839 chunks × 10240B ≒ 8MB を eMMC logo パーティションへ)
+
+### 攻撃面の再定義
+
+前回 G-1 で立てた「preloader RE で SBC state 変数書き換え」は依然有効だが、**もっと短い経路がある**:
+
+| ルート | 工数 | 難度 |
+|---|---|---|
+| G-1 preloader RE + SBC state override | 数ヶ月 | 高(未検証) |
+| **G-2 判明ルート: mtkclient で BROM 制御 + DA patch** | **数日〜数週間** | **中(mtkclient 実績あり)** |
+
+### 主な変更ファイル
+
+- 新規: `logs/experiment-G2-cyrus-capture.md` — G-2 の完全レポート
+- 新規: `logs/g2-capture/cyrus-logo-flash.pcapng` — 10MB pcap (11314 packets)
+- 新規: `logs/g2-capture/proto-phases.txt` — Python 解析でのプロトコル phase 抽出
+- 新規: `logs/g2-capture/protocol-trace-full.txt` — 全 IN/OUT トラフィックの詳細
+
+### 次のTODO(即実行可能)
+
+1. **mtkclient を `--pid 0x2000` で試す**: `python3 -m mtkclient --pid 0x2000 printgpt` などで partition table 読めるか確認
+2. 動けば `mtkclient` の DA patcher (`--patchda`) や rpmb / seccfg 系操作で任意書き込み
+3. K-touch i9 (MT6739 LineageOS 17.0) の Android 10 image を焼く準備開始
+4. 全部動いたら G-6/G-7 を圧縮して G-8 (Android 10 port) に直行
+
+### 学び
+
+- **1 変数だけの前提間違い(PID)で 6 年間コミュニティ全滅**の教訓。世界の Sunmi V2 hobbyist は誰も 0x2000 を試していない or 試したが「BROM 認識しない」と誤解した可能性
+- **正規手順を USB キャプチャすれば、独自プロトコルかどうかは pcap を見ればわかる**。次回同種の RE では最初に pcap を取るのが正解
+- **Linux 単独で SPFT が動く**ので Windows VM は完全に不要だった。前回撤退時に「Windows VM 準備必要」と諦めていたのは杞憂
+- **RE の途中で新経路が見つかることは頻繁**。G-1 で発見した Kamakiri 型 SBC state 攻撃は今も有効だが、より短い道が見えたので優先順位は下げる
+
+---
+
 ## 2026-07-01 23:30 (main) — RE 経路 G の Phase G-0/G-1 完了、Sunmi preloader の SBC state gatekeeper を特定、Kamakiri 型攻撃対象確定
 
 ### 変更概要
