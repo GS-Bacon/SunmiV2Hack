@@ -1,0 +1,24 @@
+diff --git a/mtkclient/Library/Port.py b/mtkclient/Library/Port.py
+index 8e2a58f..d7d600a 100644
+--- a/mtkclient/Library/Port.py
++++ b/mtkclient/Library/Port.py
+@@ -69,10 +69,18 @@ class Port(metaclass=LogBase):
+         i = 0
+         startcmd = b"\xa0\x0a\x50\x05"  # 5F F5 AF FA
+         length = len(startcmd)
++        # Sunmi V2 fix: drain "READY" bytes that BROM sends before handshake
++        try:
++            for _ in range(20):
++                v = ep_in(64, timeout=50)
++                if not v:
++                    break
++        except Exception:
++            pass
+         try:
+             while i < length:
+                 if ep_out(int.to_bytes(startcmd[i], 1, 'little')):
+-                    v = ep_in(1, timeout=20)  # Do not wait 1 sec, bootloader is only active for 0.3 sec.
++                    v = ep_in(1, timeout=100)  # Sunmi V2 fix: was 20ms, too short
+                     if len(v) == 1 and v[0] == ~(startcmd[i]) & 0xFF:
+                         i += 1
+                     else:

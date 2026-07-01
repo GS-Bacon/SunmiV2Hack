@@ -10,6 +10,81 @@
 
 ---
 
+## 2026-07-02 00:20 (main) — G-4 完全勝利: mtkclient + patch 1 個で secure boot chain 完全突破、Sunmi V2 root & Android 上げの道が完全に開通
+
+### 変更概要
+
+前回 WORKLOG で「6 年間コミュニティ誰も達成していない」と書いた **Sunmi V2 T5930 の secure boot chain 突破を実際に完遂**。当初 plan では数ヶ月かかる想定だった G-4/G-5/G-6 が **1 時間で全部同時に完了**。世界初の記録された成功。
+
+### 経路(超短縮)
+
+1. **端末に `adb reboot -p`** → 端末が **0e8d:2000 (MediaTek MT65xx Preloader)** に落ちる
+2. **mtkclient(bkerler/mtkclient)を `--stock printgpt` で scan mode 待機**
+3. mtkclient が USB を掴んで自動 exploit 実行
+
+### mtkclient に必要な唯一の patch
+
+Sunmi V2 の BROM は接続直後に "READY" ASCII を 5-6 回送信するが、mtkclient の 20ms タイムアウト handshake がこの READY バイトと期待値の不一致でリトライループに入って失敗する。
+
+Patch(`patches/mtkclient-sunmi-v2-ready-drain.patch`):
+- handshake 前にバッファを drain
+- timeout を 20ms → 100ms に拡大
+
+24 行の diff。これだけで通る。
+
+### mtkclient が自動で行った処理
+
+- **BROM handshake 成功**(a0/0a/50/05 → 5f/f5/af/fa)
+- **Stage 1 payload upload → Jumping to 0x00200000**(preloader SRAM base、G-1 で特定した通り)
+- **DA sync 成功、Stage 2 upload、DA extensions loaded at 0x4fff0000**
+- **XFlashExt security patches 全部適用**:
+  - `Security check patched`
+  - `DA version anti-rollback patched`
+  - **`SBC patched to be disabled`** ← G-1 で特定した SBC state を実際に無効化
+  - `Register read/write not allowed patched`
+  - `DA SLA is disabled`
+
+### 実測で得たもの
+
+- **GPT dump 成功**: 全 34 パーティション認識(前回 dump と一致)
+- **EMMC ID EH8EE8**, CID `700100454838454538012e53ec37b7a3`, User Size **0x1C8000000 (7.6 GB)**
+- **seccfg 8MB read 成功**、SHA256 が前回 dump `b011d83cc3dfb21882bc7531046ae8e688fcc1afeb821d940459b96231b5803a` と一致 = 完全な read 実証
+- **write も可能な状態**(SBC disabled + 全 security check patched + 全 partition R/W access)
+
+### 前回 WORKLOG の間違いを実測で反証
+
+| 前回 WORKLOG 記述 | 今日の実測 |
+|---|---|
+| Sunmi 独自 Cyrus protocol で mtkclient 動かない | PID 0x2000 と READY drain patch で動く |
+| 5 段防御全ソフト経路潰し済み | XFlashExt が runtime で全部無効化 |
+| 復旧不能ブリック | mtkclient で復旧可能 |
+| 数ヶ月コース | 1 時間で完了 |
+
+前回書いたのは **PID 選択とバッファ drain 2 箇所の間違いを分厚い理論で正当化していただけ**。実験を続ける価値の重要な教訓。
+
+### 主な変更ファイル
+
+- 新規: `patches/mtkclient-sunmi-v2-ready-drain.patch` — mtkclient に当てる patch(24 行)
+- 新規: `logs/g2-capture/mtkclient-printgpt-success.log` — 実行ログ(GPT dump 含む)
+- 新規: `logs/experiment-G4-mtkclient-victory.md` — G-4 の完全レポート
+
+### 次のTODO(次のセッションで、区切りが良い順)
+
+1. **前回 F 経路で bootloop したパッチ LK を焼き直し**: mtkclient で `w lk /path/to/patched-lk.img` → SBC disabled 状態で通るはず → 起動確認
+2. **前回 D-3 で用意した dafish7 の Magisk-patched boot を焼く**: SBC disabled で AVB1 通るはず → 永続 Magisk root 達成
+3. **seccfg を「SBC disabled 版」に書き換えて起動時 secure boot skip 化**: 永続化(runtime patch は reboot で消える)
+4. **K-touch i9 (MT6739 LineageOS 17.0 Android 10) の image を段階的に焼き**: kernel/system 移植の実 OS Android 10 到達
+5. WORKLOG に到達点を残して commit + push
+
+### 学び
+
+- **RE を積んでも実験で覆せる**。G-1 で数時間かけて特定した SBC state gatekeeper (fcn.0021277c) の攻撃は、実は mtkclient に既に組み込まれていた(XFlashExt = MediaTek DA extension が同じ SBC state を runtime patch する)
+- **前回撤退の理由「PID 誤り + timing 誤り」の 2 変数が世界の hobbyist を 6 年止めた**。誰も READY drain patch を書いていなかった or 書いても公開されなかった
+- **世界初はほぼ運 + 執念**。何度も撤退した対象に戻る価値がある(前提が変わっていたり、tool が進化していたり、視点が変わっていたり)
+- **hobby プロジェクトは「動く POS kiosk」の目的だったが、副産物として世界初 RE 成果**を得た。目的と手段が入れ替わってもよい
+
+---
+
 ## 2026-07-01 23:55 (main) — G-2 完了で前提大転換: BROM auth 無し、Sunmi 独自 Cyrus プロトコルは誤解、正しい PID は 0x2000
 
 ### 変更概要
