@@ -10,6 +10,158 @@
 
 ---
 
+## 2026-07-02 02:20 (main) — G-8 LK RE 開始、base=0x56000000 確定、SEC_POLICY Table 構造解読、K-touch i9 LK 入手経路特定
+
+### 変更概要
+
+G-7 復旧の放置時間(3-8h)を並行して有効活用するため、LK reverse engineering(方針 C)を開始。以下 3 タスクを並列実行:
+
+1. Ghidra 11.2.1 install(425MB download + 展開完了、Java 21 依存で headless 起動は保留)
+2. radare2 / capstone / Python で LK 内部構造の RE
+3. K-touch i9 (MT6739 LineageOS 17.0) LK バイナリの入手性 WebSearch
+
+### ★★★ 決定的成果 1: LK payload base address 特定 = **0x56000000**
+
+- 従来「MT6739 LK = 0x41E00000 base」の思い込みを完全否定
+- 判定手段: SEC_POLICY Table (file offset 0x6c340) の +0x04 field pointer 値が 0x5604XXXX と並ぶ → file offset に補正すると **"default", "preloader", "lk", "logo", "boot", "system", ...** の partition 名文字列に完全一致
+- **base VA = 0x56000000** で LK 全域が addressable(全ての string / xref 解析の前提条件が確定)
+
+### ★★★ 決定的成果 2: SEC_POLICY Table の完全構造解読
+
+- 28 バイト × 21+ エントリの配列、file 0x6c340 - 0x6c650+
+- 構造:
+
+```c
+struct sec_policy_entry {   // 28 bytes
+    uint32_t reserved_0;    // +0x00
+    uint32_t name_ptr;      // +0x04: partition 名文字列 VA
+    uint32_t reserved_2;    // +0x08
+    uint32_t reserved_3;    // +0x0c
+    uint32_t reserved_4;    // +0x10
+    uint16_t lock_state;    // +0x14: 01=locked / 00=unlocked
+    uint16_t mode;          // +0x16: 03=verify enforced / 00=skip
+    uint32_t next_ptr;      // +0x18
+};
+```
+
+- **lkpatcher の patch 対象 = SEC_POLICY Table entry 19+ の lock_state (01→00) + mode (03→00) の 21 個**
+- 従って:「lkpatcher patch は LK 内部の per-partition verify 制御を off にする patch であり、preloader 側の LK signature verify(DAA)とは**独立**」
+- **G-7 で bootloop になった真因**: preloader が patched LK 全体の signature を verify して RSA reject。SEC_POLICY を弄ろうが弄るまいが preloader は signature 不一致で拒絶。→ G-7 の教訓を再解釈すると「patched LK 単独では preloader gate を超えられない」
+
+### 成果 3: K-touch i9 LK 入手経路特定(WebSearch エージェント経由)
+
+- **stock firmware zip 公開**: `https://github.com/damolmo/K-Touch_i9/releases/download/stock/K-Touch-i9-3+32.zip` (1.1 GB, MT6739 3G+32G variant) にて `lk.bin` を SP Flash Tool 展開可能
+- **LK partition size 一致**: 標準 MT6739 scatter で `lk = 0x100000` (1 MB) = Sunmi V2 と同一
+- **AVB 無効 build**: `BOARD_AVB_ENABLE := false`, `androidboot.selinux=permissive` の LineageOS 17.0 device tree → stock LK も緩い設計と推測
+- **fastboot flashing unlock** 可能 = 独自 SBC が緩い
+- **ただし残る壁**: Sunmi 側の preloader は独自 public key で LK を verify するため、K-touch i9 LK も RSA signature 不一致で reject される可能性が高い(結局 G-7 と同じ preloader gate 問題)
+
+### 主な変更ファイル
+
+- 新規: `logs/experiment-G8-lk-recon.md` — G-8 の完全 RE レポート(base 確定、SEC_POLICY 構造、xref 追跡状況、次の RE アクション)
+- 新規: `scratch/g8-lk-recon/lk-payload.bin` — LK image から header(0x200 バイト)剥がした純粋 ARM/Thumb-2 payload(505 KB)
+- 新規: `scratch/g8-lk-recon/lk-strings.txt` — strings dump (4177 個)
+- 新規: `scratch/g8-lk-recon/find_xrefs_v2.py` — 32-bit literal + MOVW/MOVT pair xref finder (base 0x56000000)
+- 新規: `scratch/g8-lk-recon/find_string_xrefs.py` — 初版
+- 新規: `scratch/g8-lk-recon/string-xrefs-report.txt` — 現状 report(refs 追跡は次ステップ)
+- 新規: `scratch/brom-handshake-test.py` — 前セッション再開時の BROM 診断スクリプト(方針 B の 30 秒テスト実装)
+- 新規: `logs/experiment-G7-brom-handshake-diag.log` — BROM handler DEAD 実測ログ
+- ツール新規:
+  - Ghidra 11.2.1 (`tools/ghidra/ghidra_11.2.1_PUBLIC/`, 425 MB download 完了)
+  - 展開済み、Java 25 と互換問題ある可能性 → JDK 21 install 保留中
+
+### 現状の攻撃前提の再整理(G-8 前後)
+
+| 層 | 実態 | 攻撃状況 |
+|---|---|---|
+| BROM | 全 auth False | 突破済み(G-4)、ただし復旧 blocked(G-7 状態) |
+| Preloader | LK RSA verify(DAA) | 突破未達(F-5/G-7 で reject) |
+| LK 内部 SEC_POLICY | per-partition verify 制御 | lkpatcher で patch 可(意味は独立)|
+| LK 内部 seccfg lock check | unlocked → META boot | **未特定、G-8 の次の focus** |
+| Sunmi Recovery | factory reset only | 使えない(復旧手段のみ)|
+
+### 次のTODO(次のセッション)
+
+**Track A(端末復旧まで)**:
+
+1. **JDK 21 install**(apt lock 解除待ち or portable download)
+2. Ghidra headless で LK を base 0x56000000 で auto-analyze
+3. `[META]`, `Bypass...Meta Boot`, `atag,meta` の 3 文字列を Ghidra decompile で追跡 → META boot 遷移関数を特定
+4. その caller = **seccfg unlock check 分岐** = G-7 next attack の patch point
+
+**Track B(端末復旧後)**:
+
+1. mtkclient で crash mode 復旧 → 純正 LK 書き戻し
+2. G-8 で特定した META boot 分岐に NOP パッチを当てた LK を焼き試験
+   - ただし preloader RSA verify を超える必要がある = **preloader 側の攻撃も並行必須**
+3. K-touch i9 LK を焼く実験(preloader が独自 vendor 分岐で signed でも通す可能性を確認)
+
+**Track C(preloader gate 攻撃)**:
+
+1. G-1 で発見済み preloader RE の SBC state gatekeeper (`fcn.0021277c`) を実際の runtime memory 書き換えで無効化
+2. mtkclient の XFlashExt が SBC を runtime patch する仕組みを model にして、**LK 焼き前段階で preloader 内の verify skip flag を立てる** ワークフローの実装
+3. これができれば patched LK / K-touch i9 LK 両方が焼ける
+
+### 学び
+
+- **base の思い込みが数時間の RE を止めていた**。SEC_POLICY Table のような「絶対 pointer が必ず並ぶ」構造を見つけて逆算するのは、raw binary の base 決定の最強手段
+- **lkpatcher patch は preloader gate に効かない**が、LK 内部の per-partition verify を off にはできる。「LK 内部のガード」と「preloader 側のガード」が独立していることは、次の攻撃を分岐すべき理由
+- **並列 RE は効率的**: Ghidra download(background) + capstone 解析(前景) + WebSearch(Agent) の 3 スレッドで、放置時間中に大きな進捗を出せた。次同種プロジェクトでも同じ pattern を使う
+
+---
+
+## 2026-07-02 02:00 (main) — G-7 復旧: BROM handshake 現状診断(方針 B)= 前回と同状態、放置または物理切断へ
+
+### 変更概要
+
+前回セッション終了(WORKLOG 上のタイムスタンプ 02:00)から実質放置時間ゼロで復旧セッションを開始。pyusb 直接コマンドで BROM handshake 4 バイトを送信し、全て **raw echo(inverted せず)** で返る = **BROM software handler DEAD、CDC-ACM loopback のみ動作** を再確認。放置が絶対に必要と再確定した。
+
+### 診断結果(scratch/brom-handshake-test.py)
+
+```
+send 0xa0 -> recv 0xa0 (expected 0x5f) [ECHO_RAW]
+send 0x0a -> recv 0x0a (expected 0xf5) [ECHO_RAW]
+send 0x50 -> recv 0x50 (expected 0xaf) [ECHO_RAW]
+send 0x05 -> recv 0x05 (expected 0xfa) [ECHO_RAW]
+Summary: 0/4 bytes matched expected
+VERDICT: BROM handler DEAD - CDC-ACM raw loopback only
+```
+
+USB config:
+- 端末: `0e8d:0003` MediaTek MT6227 (BROM enumeration OK)
+- Interface 1: OUT=0x01, IN=0x81 (CDC data)
+- Interface 0: CDC control(kernel driver detach 済)
+- 初期 drain 対象バイト無し = 前回まで送っていた "READY" ASCII すら now empty
+
+### 意味
+
+- USB は enumerate、ハードウェアは生きているが、SoC の BROM 実行 layer が停止したまま
+- 放置 vs 物理切断のいずれかで SoC state を完全に飛ばさないと復旧経路が全て閉じる
+- 電源供給(USB VBUS 5V)で SRAM が retention されている可能性が高く、電気的に切らない限りぬけない
+
+### 主な変更ファイル
+
+- 新規: `scratch/brom-handshake-test.py` — 再現可能な診断スクリプト(pyusb で 4 バイト handshake test)
+- 新規: `logs/experiment-G7-brom-handshake-diag.log` — 実行ログ
+
+### 次のTODO(ユーザー判断待ち)
+
+以下 3 分岐の選択:
+
+1. **A. 追加放置(推奨)**: USB を物理的に抜いて 3-8 時間、部分放電で SoC state を自然に飛ばす。バッテリー完全放電までは行かせない(brick リスク回避、user 指摘)
+2. **B. バッテリー物理切断**: 分解含む、機械的に SRAM を確実に飛ばす、リスクは分解ミス
+3. **C. 復旧を後回しにして代替経路の RE**: 
+   - K-touch i9 (MT6739 LineageOS 17.0) の LK を直接焼く実験の下調べ
+   - LK Ghidra 逆解析で "unlock-state check" 特定(復旧成功時に活かす)
+   - Flutter kiosk 化のみに戻る(復旧待ちの隙間仕事)
+
+### 学び
+
+- pyusb 直接叩きの診断スクリプトを **`scratch/` に固定** で置いておくと、以降のセッションで 30 秒で状態確認できる。次回同種プロジェクトでもテンプレとして流用可
+- BROM が enumerate = 復活、ではない。USB layer(CDC-ACM stub)は BROM とは独立に動く。**必ず handshake で inverted echo を確認する**のが唯一の真の判定
+
+---
+
 ## 2026-07-02 02:00 (main) — G-7 復旧試行続行、決定的な診断結果: BROM handshake handler が動いていない
 
 ### 変更概要
