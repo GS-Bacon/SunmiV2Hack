@@ -1,0 +1,125 @@
+# Preloader Patch v2: SBC gate + image_auth gate 短絡 (8 バイト)
+
+## Track F の追加発見と Track C v1 の限界
+
+Track C v1(`preloader-sbc-disable.patch`)は **`fcn.0021277c` (SBC state gatekeeper) を短絡**する 4 バイト patch だった。しかし Track F で Ghidra decompile を深追いした結果、**preloader 内には SBC state を読む関数が 2 個ある**ことが判明:
+
+| 関数 | 用途 | Track C v1 patch |
+|---|---|---|
+| `fcn.0021277c` | USB DL DA verify(mtkclient session 経路) | ★対象 |
+| `FUN_002120ac` | eMMC LK image_auth(通常 boot 経路) | 対象外 |
+
+image_auth_main のコールチェーン:
+
+```
+image_auth_main (fcn.002066b4)
+    ↓
+FUN_0020f9b0 (auth gate, 12 バイト: return (FUN_0020f8c0() >> 1) & 1;)
+    ↓
+FUN_0020f8c0 (SEC_POLICY_reader, LK の FUN_5601a6a8 と設計完全一致)
+    ↓
+FUN_0021211c (SBC state wrapper)
+    ↓
+FUN_002120ac (実 SBC state reader, fcn.0021277c と別関数)
+```
+
+**Track C v1 単独では eMMC 経路の LK RSA verify は bypass できない**。
+
+## v2 patch(v1 の 4 バイト + 追加 4 バイト = 8 バイト)
+
+### Patch 1: `fcn.0021277c` (v1 継承, USB DL 経路)
+
+| Offset | Original | Patched | 命令 |
+|---|---|---|---|
+| 0x1206E | `11 4b` | `00 20` | ldr r3, [pc, #0x44] → movs r0, #0 |
+| 0x12070 | `7b 44` | `08 bd` | add r3, pc → pop {r3, pc} |
+
+### Patch 2: `FUN_0020f9b0` (新規, eMMC LK verify 経路)
+
+| Offset | Original | Patched | 命令 |
+|---|---|---|---|
+| 0xF2A0 | `08 b5` | `00 20` | push {r3, lr} → movs r0, #0 |
+| 0xF2A2 | `ff f7` | `70 47` | bl 0x20f8c0 (start) → bx lr |
+
+**`FUN_0020f9b0` の変更前後**:
+
+```
+;; 変更前 (12 bytes)
+0x0020f9b0  08 b5         push {r3, lr}
+0x0020f9b2  ff f7 85 ff   bl 0x0020f8c0        ; SEC_POLICY_reader
+0x0020f9b6  c0 f3 40 00   ubfx r0, r0, #1, #1  ; bit 1 抽出
+0x0020f9ba  08 bd         pop {r3, pc}
+
+;; 変更後
+0x0020f9b0  00 20         movs r0, #0          ; ★ 常に 0
+0x0020f9b2  70 47         bx lr                ; ★ 即 return
+0x0020f9b4  85 ff c0 f3   (unreachable)
+0x0020f9b8  40 00 08 bd   (unreachable)
+```
+
+lr は push していないので caller の lr がそのまま生きる → `bx lr` で正常に caller に戻る。
+
+## 効果
+
+`FUN_0020f9b0` は `image_auth_main` と `FUN_0020b638`(second_auth_fn)の 2 関数から呼ばれる gate。両者とも:
+
+- `if (FUN_0020f9b0() != 0) { cert verify; pubkey verify; }`
+
+の形で auth を gate している。`FUN_0020f9b0` が常に 0 を返すと、**preloader 内の全 image auth が skip される**。
+
+つまり:
+
+- LK partition の RSA signature が壊れていても preloader は verify skip
+- G-7 で bootloop になった patched LK が起動可能になる仮説
+
+## 検証
+
+- Patched size: 4194304 bytes (4 MB, 純正と同一)
+- Byte diff: 8 バイト
+- Original SHA256: `10d33a52ce7ea88269dccea15cfb3180721b72070bd2a4eb96c1e3f5e86d6424`
+- Patched SHA256:  `f826ed14a5fa52e96b54cfb083e4af45682a54b89c058779d82d32ec8cbac6c0`
+
+## Track C v1 との関係
+
+Track C v1 の `preloader-sbc-disable.img` (SHA256 `025256e4...`) は本 v2 の subset。**v2 を優先して使う**。v1 は「USB DL flow を扱う場合の参考実装」として残す。
+
+## 想定される完全 chain (Track D + Track F patched preloader)
+
+```
+[段 1: BROM auth]                = OK (chip-level 全 auth False)
+[段 2: preloader SBC state (USB)] = fcn.0021277c 短絡で常に disabled  (Track F patch 1)
+[段 3: preloader image_auth]     = FUN_0020f9b0 短絡で常に skip       (Track F patch 2)
+[段 4: LK seccfg META check]     = FUN_5603b2ec 短絡で常に locked と誤認 (Track D)
+[段 5: LK signature 内部 verify] = 未確認、Track F の decompile では検出せず
+```
+
+段 1-4 が全て通れば、patched LK が Android boot まで到達する可能性が高い。段 5 は理論上のもの、実測で判明する。
+
+## 適用手順(復旧後、Track D と併用)
+
+**Order A(推奨、慎重)**:
+1. まず Track D の patched LK のみ焼く(reversible)
+2. bootloop なら preloader 側の block を意味 → Track F 焼き判断へ
+3. Track F 焼き(brick リスク極高、`I ACCEPT THE RISK` 必要)
+
+**Order B(即断)**:
+1. Track F preloader + Track D LK 同時焼き
+2. 結論最速化、brick リスクは 2 倍
+
+## 適用 script
+
+`patches/apply-preloader-sbc-disable.sh` を v2 用に更新して以下:
+
+```
+sudo -E ./patches/apply-preloader-image-auth-disable.sh apply
+sudo -E ./patches/apply-preloader-image-auth-disable.sh rollback
+```
+
+## Ref
+
+- `logs/experiment-G1-preloader-structure.md` — G-1 の初期 RE
+- `scratch/g1-preloader/ghidra-preloader-analysis.txt` — Ghidra 完全解析
+- `scratch/g1-preloader/ghidra-auth-gate.txt` — image_auth chain の完全 dump
+- `scratch/g1-preloader/ghidra-actual-sbc.txt` — 2 個の SBC state reader の区別
+- `patches/preloader-sbc-disable.patch` — Track C v1(subset)
+- `patches/lk-seccfg-shortcut.patch` — Track D

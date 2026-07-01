@@ -10,6 +10,111 @@
 
 ---
 
+## 2026-07-02 03:20 (main) — G-8 Track F: image_auth_main の gate は fcn.0021277c ではないと判明、Track C を v2 に修正
+
+### 変更概要
+
+Track C v1(fcn.0021277c 短絡 4 バイト)が **eMMC LK RSA verify を bypass できない**ことが Track F の Ghidra 追加解析で判明。preloader 内には SBC state を扱う関数が 2 つあり、image_auth_main は fcn.0021277c ではなく別関数 `FUN_002120ac` を経由する。修正した Track F patched preloader(8 バイト)を生成、Track C v1 は subset として残す。
+
+### 決定的な発見(Ghidra 追加 script による)
+
+**preloader 内の 2 個の SBC state gate**:
+
+| 関数 | 用途 | Track C v1 patch |
+|---|---|---|
+| `fcn.0021277c` | **USB DL DA verify** (mtkclient session 経路)| ★対象 |
+| `FUN_002120ac` | **eMMC LK image_auth** (通常 boot 経路)| 対象外 |
+
+image_auth_main のコールチェーン:
+
+```
+image_auth_main (fcn.002066b4)
+    ↓ 
+FUN_0020f9b0 (12 バイト、return (FUN_0020f8c0() >> 1) & 1)
+    ↓
+FUN_0020f8c0 (SEC_POLICY_reader、LK の FUN_5601a6a8 と設計完全一致)
+    ↓
+FUN_0021211c (SBC state wrapper)
+    ↓
+FUN_002120ac (SBC state reader — 0x11/0x22/0 判定、fcn.0021277c と同じ設計だが別関数!)
+```
+
+つまり **Track C v1 patch だけでは preloader が patched LK を通さない可能性が高い**。
+
+### Track F patched preloader (v2)
+
+**8 バイト patch = Track C v1 の 4 バイト + FUN_0020f9b0 短絡の 4 バイト**:
+
+| Offset | Original | Patched | 対象 |
+|---|---|---|---|
+| 0x1206E | `11 4b` | `00 20` | fcn.0021277c (v1 継承)|
+| 0x12070 | `7b 44` | `08 bd` | fcn.0021277c (v1 継承)|
+| **0xF2A0** | `08 b5` | `00 20` | **FUN_0020f9b0 短絡(新規)**|
+| **0xF2A2** | `ff f7` | `70 47` | **FUN_0020f9b0 短絡(新規)**|
+
+FUN_0020f9b0 変更後:
+
+```
+0x0020f9b0  00 20         movs r0, #0    ; 常に return 0
+0x0020f9b2  70 47         bx lr          ; 即 return (lr は push してないので caller のまま)
+```
+
+これで preloader の**全 image auth(cert verify + pubkey verify)が skip される**。呼出元 2 個(image_auth_main と second_auth_fn)の両方に効く。
+
+### 検証
+
+- Patched size: 4194304 bytes (4 MB、変わらず)
+- Byte diff: 正確に 8 バイト
+- Original SHA256: `10d33a52ce7ea88269dccea15cfb3180721b72070bd2a4eb96c1e3f5e86d6424`
+- **v2 Patched SHA256**: `f826ed14a5fa52e96b54cfb083e4af45682a54b89c058779d82d32ec8cbac6c0`
+- v1 (Track C 単独) Patched SHA256: `025256e4e129019374b7aa9fce6a9d965291ed35f02c88baa7a47c5675b33b5d`
+
+### 更新した完全 chain
+
+```
+[段 1: BROM auth]                = OK (chip-level 全 False)
+[段 2: preloader SBC state USB]  = fcn.0021277c 短絡         (Track F v2 patch 1)
+[段 3: preloader image_auth]     = FUN_0020f9b0 短絡         (Track F v2 patch 2, ★新規)
+[段 4: LK seccfg META check]     = FUN_5603b2ec 短絡         (Track D)
+[段 5: LK 内部整合性]            = 未確認、Track F では検出せず
+```
+
+### 主な変更ファイル
+
+- 新規: `scratch/preloader-patch/preloader-image-auth-disable.img` — v2 patched (SHA256 上記)
+- 新規: `patches/preloader-image-auth-disable.patch` — v2 完全 documentation
+- 新規: `patches/apply-preloader-image-auth-disable.sh` — v2 flash script (I ACCEPT THE RISK 付き)
+- 新規: `scratch/g1-preloader/ghidra-auth-gate.txt` — image_auth chain の完全 dump (917 行)
+- 新規: `scratch/g1-preloader/ghidra-efuse-detail.txt` — FUN_0020f8c0 が SEC_POLICY_reader と確認
+- 新規: `scratch/g1-preloader/ghidra-actual-sbc.txt` — fcn.0021277c と FUN_002120ac の区別確定
+- 新規: `scratch/g1-preloader/ghidra-scripts/CheckAuthGate.py`
+- 新規: `scratch/g1-preloader/ghidra-scripts/CheckEfuseReader.py`
+- 新規: `scratch/g1-preloader/ghidra-scripts/CheckActualSbc.py`
+- 継続: `patches/preloader-sbc-disable.patch` — Track C v1、subset として残す
+- 継続: `scratch/preloader-patch/preloader-sbc-disable.img` — 参考
+
+### 復旧後の適用順序(推奨)
+
+1. **端末復旧**(引き続き放置または物理切断)
+2. Track D の LK patch のみ焼き試験(reversible)
+3. bootloop → preloader 側 block と確定 → Track F v2 patched preloader を焼き
+4. Order B(即断)なら Track F + Track D 同時、brick リスク 2 倍で結論最速化
+
+### 教訓・学び
+
+- **Ghidra の関数名は「SBC state reader」と 1 個だけと思い込むと危険**。同じ 0x11/0x22/0 パターンを 2 関数(fcn.0021277c、FUN_002120ac)が持ち、それぞれ異なる runtime state を読んでいた
+- **G-1 で r2 が特定した fcn.0021277c は USB DL 経路専用だった**。Ghidra で decompile chain を全部辿らないと真の boot 経路 gate は見えない
+- **image_auth_main を 1 個の関数として見るのではなく、gate 関数(FUN_0020f9b0)を経由する構造として見る**と、短絡 patch が cleanly 1 箇所で成立する。 これは LK Track D と同じ設計原理
+- **Sunmi preloader は LK と設計を共有**: SBC state + SEC_POLICY 2 段 gate、同じ policy table 構造(0x1c バイト × 21 エントリ)、同じ boot decision pattern。既存 LK 解析の知見が全部使える
+
+### 次のTODO
+
+1. **端末復旧**
+2. `FUN_002120ac` を追加で patch する必要が本当にあるか要確認(v2 で FUN_0020f9b0 短絡した以上、FUN_002120ac の SBC state 値は無視されるので追加不要のはず)
+3. K-touch i9 stock LK zip の download
+
+---
+
 ## 2026-07-02 03:10 (main) — G-8 Track C 完了: preloader SBC-disable 4-byte patch 生成、Track D と併せて完全 chain 準備
 
 ### 変更概要
