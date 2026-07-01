@@ -1,0 +1,83 @@
+# LK Patch: seccfg unlock 検出短絡 (2 バイト)
+
+## 対象
+
+- Source: `dump/lk.img` (Sunmi V2 T5930 純正 LK, 1 MB, MediaTek MT6739)
+- Base VA: 0x56000000
+- Function: `FUN_5603b2ec` (seccfg lock_state reader), 32 バイト
+- File offset in lk.img: 0x3b4f4
+- File offset in lk-payload.bin (header 剥がし後): 0x3b2f4
+
+## 目的
+
+LK が seccfg partition の lock_state field (offset +0x0c) を読んで「unlocked (0x03)」と判定すると `META boot mode` に遷移する。この判定を無効化し、seccfg 実 unlock 状態でも LK が常に「locked (1)」と誤認するように短絡させる。
+
+## Patch (raw byte level)
+
+| Offset (lk.img) | Original | Patched | 意味 |
+|---|---|---|---|
+| 0x3b4f4 | `1b b9` (CBNZ r3, +6) | `00 bf` (NOP.n) | seccfg 実 pointer への分岐を無効化 |
+
+## Assembly 前後
+
+### 変更前
+```
+0x5603b2ec  07 4b        ldr  r3, [pc, #0x1c]
+0x5603b2ee  7b 44        add  r3, pc
+0x5603b2f0  1b 68        ldr  r3, [r3, #0]
+0x5603b2f2  1b 78        ldrb r3, [r3, #0]          ; r3 = flag byte
+0x5603b2f4  1b b9        cbnz r3, 0x5603b2fe        ; ★ flag非0 → 実lock_state読み
+0x5603b2f6  01 23        movs r3, #1
+0x5603b2f8  03 60        str  r3, [r0, #0]          ; *param_1 = 1
+0x5603b2fa  00 20        movs r0, #0
+0x5603b2fc  70 47        bx   lr                    ; return
+0x5603b2fe  04 4b        ldr  r3, [pc, #0x10]       ; ↓ここ以降 unreachable
+0x5603b300  7b 44        add  r3, pc
+0x5603b302  1b 68        ldr  r3, [r3, #0]
+0x5603b304  db 68        ldr  r3, [r3, #0xc]        ; r3 = seccfg[0xc] = lock_state
+0x5603b306  03 60        str  r3, [r0, #0]          ; *param_1 = lock_state
+0x5603b308  00 20        movs r0, #0
+0x5603b30a  70 47        bx   lr
+```
+
+### 変更後
+```
+0x5603b2f4  00 bf        nop                        ; CBNZ 無効化
+                                                     ; ↓常に (r3=1, *param_1=1) パス
+```
+
+## 検証
+
+- Original SHA256: `fa9e3290118ed58d331d41a37050f59e9eeab203f570487f8d8c8e022a860926`
+- Patched SHA256:  `4d70cd923678b952f733424832f43cc532c1b301781440817afdc2b9460c1381`
+- Byte diff: 2 バイト (0x3b4f4-0x3b4f5)
+- Size: 1048576 bytes (1 MB) 変わらず
+
+## 想定効果 & 残る壁
+
+- **効果**: LK 内で seccfg.lock_state 判定は常に 1 (locked) → META boot 分岐を回避
+- **副作用**: SEC_POLICY_reader (FUN_5601a6a8) が「seccfg locked」パスを取る → entry[+0x16] (policy.mode) を返す = 通常の locked policy 適用
+- **残る壁 1**: preloader が LK 全体の RSA signature を verify するため、この 2 バイト patch でも preloader が reject。preloader 側の verify skip 攻撃(G-1 SBC state gatekeeper `fcn.0021277c` runtime patch)が並行必要
+- **残る壁 2**: SBC state 変数 (`FUN_5603a2d0` で読まれる global int) は 0x11 (enforcing) のまま。これも別途 patch が必要な可能性
+
+## 適用手順(復旧後)
+
+1. 端末を BROM mode 復旧 (mtkclient crash mode)
+2. mtkclient で patched LK 焼き:
+   ```
+   sudo -E .venv/bin/python -m mtkclient w lk /home/bacon/SunmiV2Hack/scratch/lk-patch/lk-seccfg-shortcut.img --stock
+   ```
+3. reboot → 動作確認
+
+## Rollback(bootloop 時)
+
+```
+sudo -E .venv/bin/python -m mtkclient w lk /home/bacon/SunmiV2Hack/dump/lk.img --stock
+```
+
+## Ref
+
+- `logs/experiment-G8-lk-ghidra.md` — Ghidra RE 全報告
+- `scratch/g8-lk-recon/ghidra-final.txt` — FUN_5603b2ec 他の decompile
+- `scratch/g8-lk-recon/fn5603b2ec-dump.txt` — assembly 実測
+- `scratch/lk-patch/lk-seccfg-shortcut.img` — patched LK

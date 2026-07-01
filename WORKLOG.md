@@ -10,6 +10,102 @@
 
 ---
 
+## 2026-07-02 03:00 (main) — G-8 Track D 完了: seccfg-shortcut 2-byte patched LK 生成、復旧後即焼き準備完了
+
+### 変更概要
+
+前セッションで確定した「案 C: FUN_5603b2ec 短絡」を実 image に落とし込んだ。**Ghidra dump した assembly から CBNZ 命令の正確な file offset を特定 → Thumb NOP に置換 → patched lk.img 完成**。復旧後に即実験できる状態を作った。
+
+### patch 詳細
+
+**Target**: `FUN_5603b2ec` (seccfg lock_state reader), VA 0x5603b2ec-0x5603b30b, 32 バイト
+
+**Assembly 実測** (Ghidra script `DumpTargetFn.py`):
+
+```
+0x5603b2ec  07 4b        ldr  r3, [pc, #0x1c]     ; load DAT_5603b30c address
+0x5603b2ee  7b 44        add  r3, pc
+0x5603b2f0  1b 68        ldr  r3, [r3, #0]         ; r3 = *flag_pointer
+0x5603b2f2  1b 78        ldrb r3, [r3, #0]         ; r3 = flag byte
+0x5603b2f4  1b b9        cbnz r3, 0x5603b2fe       ; ★ flag != 0 なら実 lock_state 読み
+0x5603b2f6  01 23        movs r3, #1
+0x5603b2f8  03 60        str  r3, [r0, #0]         ; *param_1 = 1 (locked)
+0x5603b2fa  00 20        movs r0, #0
+0x5603b2fc  70 47        bx   lr
+0x5603b2fe  04 4b        ldr  r3, [pc, #0x10]      ; 実 seccfg pointer 経路(unreachable 化する)
+[以下省略]
+```
+
+**Patch**: 1 命令(2 バイト)を書き換え
+
+| lk.img offset | Original | Patched | 命令 |
+|---|---|---|---|
+| 0x3b4f4 | `1b b9` | `00 bf` | CBNZ r3, +6 → NOP.n |
+
+結果として、`*param_1 = 1` (locked) 短絡パスを常に実行 → seccfg 実 unlock 状態でも LK が locked と誤認 → META boot 分岐を回避
+
+### 実測結果
+
+- Patched image size: 1048576 bytes = 1 MB(純正と同一)
+- byte-level diff: 正確に 2 バイト(想定通り)
+- **Original SHA256**: `fa9e3290118ed58d331d41a37050f59e9eeab203f570487f8d8c8e022a860926`
+- **Patched SHA256**: `4d70cd923678b952f733424832f43cc532c1b301781440817afdc2b9460c1381`
+- Patch context: `07 4b 7b 44 1b 68 1b 78 [00 bf] 01 23 03 60 00 20 70 47 04 4b ...` (bracket = patched)
+
+### 主な変更ファイル
+
+- 新規: `scratch/lk-patch/lk-seccfg-shortcut.img` — patched LK image (1 MB, SHA256 上記)
+- 新規: `patches/lk-seccfg-shortcut.patch` — 完全な patch document (offset, assembly diff, SHA256, 使い方)
+- 新規: `patches/apply-lk-seccfg-shortcut.sh` — flash apply/rollback script (SHA256 verify 内蔵)
+- 新規: `scratch/g8-lk-recon/fn5603b2ec-dump.txt` — Ghidra 実測 assembly
+- 新規: `scratch/g8-lk-recon/ghidra-scripts/DumpTargetFn.py` — 再現用 script
+
+### 復旧後の実験手順(準備完了)
+
+1. 端末を BROM mode に(復旧作業後):
+   ```
+   lsusb | grep 0e8d:0003
+   ```
+2. Patched LK を焼く:
+   ```
+   sudo -E ./patches/apply-lk-seccfg-shortcut.sh apply
+   ```
+3. bootloop 発生時の rollback:
+   ```
+   sudo -E ./patches/apply-lk-seccfg-shortcut.sh rollback
+   ```
+
+### 残る壁(実験前に想定)
+
+- **preloader RSA verify**: LK 全体の signature を preloader が verify するため、この 2 バイト patch でも preloader が reject する可能性が高い(G-7 の実験結果と同じパターン)
+- **必要な並行攻撃**: preloader 内の SBC state gatekeeper (`fcn.0021277c`) を runtime patch する tool 作成
+  - あるいは preloader を含む image chain 全体を re-sign する方法(現実的には困難)
+
+### 検証しなくてはいけない仮説(実験の意義)
+
+- G-7 で「seccfg unlock → META boot」を観察したが、この 2 バイト patch を当てた LK が焼ければ:
+  - もし preloader が LK 焼きを許容し、この patched LK が boot → **仮説証明(FUN_5603b2ec が META 分岐の入口)**
+  - もし preloader が reject → 想定通り(preloader gate が真の壁)
+- どちらの結果でも、preloader gate 攻撃(next step)の必要性が確認できる
+
+### 次のTODO
+
+1. **端末復旧**(引き続き放置または物理切断)
+2. 復旧後、patched LK 焼き試験
+3. 並行: G-1 の preloader `fcn.0021277c` runtime patch tool 実装
+4. K-touch i9 LK stock zip の download(サイズ 1.1 GB、事前準備)
+
+### 学び
+
+- **Ghidra の decompile + assembly dump の組み合わせで 2 バイト patch が確定できる**。C 疑似コードだけでは branch encoding が分からない、assembly を見て CBNZ 命令の直接 NOP 化で決着
+- **Sunmi V2 の secure boot 破りは 3 段構造**:
+  - 段 1: BROM auth = 突破済(mtkclient + G-4 XFlashExt)
+  - 段 2: preloader RSA verify = **本格 gate、未突破**
+  - 段 3: LK 内 seccfg lock_state 判定 = **今回の 2 バイト patch で無効化**(復旧後試験)
+- 各段を独立に理解できたのが G-8 の大きな成果、preloader 攻撃を焦点化できる
+
+---
+
 ## 2026-07-02 02:45 (main) — G-8 Ghidra 頭出し、LK は 2 段ロック機構と判明、1-byte patch 候補確定
 
 ### 変更概要
