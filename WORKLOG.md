@@ -10,6 +10,105 @@
 
 ---
 
+## 2026-07-02 02:45 (main) — G-8 Ghidra 頭出し、LK は 2 段ロック機構と判明、1-byte patch 候補確定
+
+### 変更概要
+
+Ghidra 11.2.1 + Temurin JDK 21 (portable) で LK auto-analyze 完了、1199 関数を認識。Jython PostScript で string xref + caller chain を追い、**Sunmi V2 LK が 2 段のロック機構を持つ**ことを完全解明。**1-byte patch で seccfg unlock 検出を無効化できる candidate** も特定。
+
+### ★★★ 決定的発見: LK は preloader と同型の 2 段ロック機構
+
+| 機構 | 判定関数 | 対象 | 意味 |
+|---|---|---|---|
+| **内部 SBC state** | `FUN_5603a37c` → `FUN_5603a2d0` | 2 段 pointer 経由の global int | preloader G-1 と全く同じ **0x11 (enforcing) / 0x22 (eFuse dep) / 0 (disabled)** の 3 状態 gatekeeper |
+| **seccfg partition** | `FUN_5603b2ec` | `*(int*)(seccfg_buf + 0xc)` | 実 partition の `lock_state` field(0x01=locked / 0x03=unlocked)|
+
+**preloader G-1 で発見した `fcn.0021277c` の SBC state gatekeeper と設計パターンが 100% 一致**。MediaTek boot chain は preloader / LK 両方で同じ SBC state gate を再利用。
+
+### seccfg struct v4 完全解読
+
+`FUN_5603ae74` (SECCFG_DISPATCHER) の初期化コード実測:
+
+```c
+struct seccfg {         // 60 bytes total
+    uint32_t magic;        // +0x00: 0x4D4D4D4D "MMMM"
+    uint32_t version;      // +0x04: 4
+    uint32_t size;         // +0x08: 0x3c
+    uint32_t lock_state;   // +0x0c: 1/2/3/4 (fully_lock/transition/fully_unlock/re-lock)
+    uint32_t field_10;     // +0x10: 1
+    uint32_t reserved_14;  // +0x14: 0
+    uint32_t magic2;       // +0x18: 0x45454545 "EEEE"
+    uint8_t  hmac[32];     // +0x1c: HMAC-SHA256 (FUN_5603f104 で計算)
+};
+```
+
+### boot 決定関数 chain 完全解読
+
+- **boot_orchestrator (FUN_56002060, 820B)** — line 69 で `META_flag_handler` を呼び、line 71 以降で `boot_mode` global を分岐:
+  - `!= 99` → normal 準備
+  - `== 2` → META boot
+  - `== 100` → Android boot
+  - その他 → fastboot/recovery 系
+- **META_flag_handler (FUN_560029b8, 430B)** — 以下の順で判定して `boot_mode` に代入:
+  - reboot_meta_flag 一致 → 1
+  - `FUN_5601e36c()` != 0 → 99
+  - **デフォルト(全条件不一致) → 2 (= META!!)**
+- **SEC_POLICY_reader (FUN_5601a6a8, 160B)** — SBC state × seccfg lock_state のマトリクスで partition 単位 policy byte を返す。lkpatcher patch はここに効くが boot_mode 判定には無関与
+
+### ★★★ 1-byte patch 候補確定(復旧後の実験用)
+
+3 案検討して、最有力の 1 案:
+
+**案 C: `FUN_5603b2ec` (seccfg lock_state reader) 短絡**
+
+```c
+// 現在
+if (**(char**)(...) == '\0') { *param_1 = 1; return 0; }
+*param_1 = *(int*)(seccfg_buf + 0xc);   // ← 実 lock_state を返す
+return 0;
+
+// patched (実 lock_state を無視して 1 を返す)
+*param_1 = 1;
+return 0;
+```
+
+- 効果: seccfg 実 unlock 状態でも LK が locked と誤認 → META boot を誘発しない
+- 副作用: seccfg 判定のみ影響、他 boot logic は無傷
+- リスク: **低**、boot 全体は正常動作継続
+
+### 残る問題(復旧が前提)
+
+- **preloader RSA verify**: LK に 1 byte patch を当てても preloader が signature reject する
+- 追加パッチ必要: G-1 で発見済 preloader 内 SBC state gatekeeper `fcn.0021277c` の runtime patch
+- あるいは K-touch i9 stock LK を焼く実験(preloader が独自 vendor 分岐で拒否しない可能性)
+
+### 主な変更ファイル
+
+- 新規: `logs/experiment-G8-lk-ghidra.md` — Ghidra 解析の完全レポート、call chain、patch 候補 3 案
+- 新規: `tools/jdk21/jdk-21.0.11+10/` — Temurin JDK 21 portable(200 MB、apt lock 回避のため)
+- 新規: `scratch/g8-lk-recon/ghidra-proj/` — Ghidra project、1199 関数 auto-analyze 済
+- 新規: `scratch/g8-lk-recon/ghidra-scripts/*.py` — Jython PostScript 4 個(次セッション再実行可)
+- 新規: `scratch/g8-lk-recon/ghidra-*.txt` — 5 種 decompile レポート
+- 更新: `tools/ghidra/ghidra_11.2.1_PUBLIC/support/launch.properties` — JAVA_HOME_OVERRIDE 追加
+
+### 次のTODO(復旧後の実験)
+
+1. **端末復旧**(USB 抜いて 3-8 時間放置 or バッテリー物理切断)
+2. mtkclient crash mode で純正 LK 書き戻し
+3. **案 C の 1-byte patch を lk.img に当てた test image を焼き試験**
+   - preloader RSA verify は残るので、preloader-side attack も並行必要
+4. G-1 の preloader SBC state gatekeeper を runtime patch する tool 作成
+5. 全部通ったら K-touch i9 LK 焼き実験に move
+
+### 学び
+
+- **Ghidra headless + Jython は 1200 関数を数分で navigate 可能**、手作業 r2 の 10-100x
+- **Sunmi の boot chain security は preloader / LK 両方で同型 SBC state gatekeeper 設計**、1 個の攻撃 pattern で両方倒せる可能性
+- **base 0x56000000 の発見が全ての鍵**、SEC_POLICY Table pointer からの逆算という手法はテンプレ化価値がある
+- **apt lock hung の際は portable JDK download** で回避、debconf 待ちを触らない方が安全
+
+---
+
 ## 2026-07-02 02:20 (main) — G-8 LK RE 開始、base=0x56000000 確定、SEC_POLICY Table 構造解読、K-touch i9 LK 入手経路特定
 
 ### 変更概要
