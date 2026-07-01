@@ -1,0 +1,114 @@
+# Preloader Patch: SBC state gatekeeper 短絡 (4 バイト)
+
+## 対象
+
+- Source: `dump/preloader-boot0.img` (Sunmi V2 T5930 純正 preloader dump, 4 MB partition, MediaTek MT6739)
+- 実 preloader content: 先頭 0x1C89C bytes (114 KB)、以降 0xFF padding
+- Base load VA: `0x00200F10` (from GFH FILE_INFO)
+- Function: `fcn.0021277c` (SBC state gatekeeper), 70 バイト、VA 0x21277c-0x2127c1
+- File offset in `preloader-boot0.img`: **0x1206C** (0x21277C - 0x200F10 + 0x800 dump 頭)
+- File offset in extracted `preloader.bin`: **0x1186C**
+
+## 目的
+
+Sunmi V2 preloader が LK partition を verify する際に呼ぶ SBC state gatekeeper (`fcn.0021277c`) の判定を、常に「SBC disabled (return 0)」を返すよう短絡させる。これにより:
+
+- G-4 で mtkclient XFlashExt が runtime に行っている「SBC patched to be disabled」の効果を、電源リセット後の通常 boot でも維持
+- 通常 boot で stock preloader が起動 → 我々の patched preloader が起動 → LK RSA verify skip → patched LK も boot 可能
+- Track D の LK seccfg-shortcut patch と組み合わせて「patched LK + patched preloader」の完全経路が通る想定
+
+## Patch (raw byte level)
+
+| Offset (preloader-boot0.img) | Original | Patched | 命令 |
+|---|---|---|---|
+| 0x1206E | `11 4b` | `00 20` | ldr r3, [pc, #0x44] → movs r0, #0 |
+| 0x12070 | `7b 44` | `08 bd` | add r3, pc → pop {r3, pc} |
+
+合計 4 バイト書き換え。
+
+## Assembly 前後 (Ghidra 実測)
+
+### 変更前
+
+```
+0x0021277c  08 b5         push  {r3, lr}
+0x0021277e  11 4b         ldr   r3, [pc, #0x44]      ; DAT_002127c4 = 0x9BE8 offset
+0x00212780  7b 44         add   r3, pc               ; r3 = 0x21C36C
+0x00212782  1b 68         ldr   r3, [r3, #0]         ; r3 = *(0x21C36C) = 0x0010B8B8
+0x00212784  1b 68         ldr   r3, [r3, #0]         ; r3 = *(0x0010B8B8)
+0x00212786  1a 68         ldr   r2, [r3, #0]         ; r2 = SBC state value
+0x00212788  11 2a         cmp   r2, #0x11
+0x0021278a  18 d0         beq   0x002127be           ; → return 1 (ENFORCING)
+0x0021278c  22 2a         cmp   r2, #0x22
+0x0021278e  02 d0         beq   0x00212796           ; → efuse path
+0x00212790  3a b9         cbnz  r2, 0x002127a2       ; → log path
+0x00212792  10 46         mov   r0, r2               ; r0 = 0
+0x00212794  08 bd         pop   {r3, pc}             ; return 0 (DISABLED)
+[以下 return 1 パス / efuse path / log path が続く、変更後は unreachable]
+```
+
+### 変更後
+
+```
+0x0021277c  08 b5         push  {r3, lr}
+0x0021277e  00 20         movs  r0, #0               ; ★ 常に r0 = 0 (SBC disabled)
+0x00212780  08 bd         pop   {r3, pc}             ; ★ 即 return 0
+[以下 unreachable、無害]
+```
+
+これで:
+- Sunmi preloader が SBC state を「chip level で `0x11` (enforcing)」と読んでも
+- gatekeeper 関数が返す値は常に 0 (disabled)
+- 従って LK RSA verify も skip されるはず
+
+## 検証
+
+- Original SHA256: `10d33a52ce7ea88269dccea15cfb3180721b72070bd2a4eb96c1e3f5e86d6424`
+- Patched SHA256:  `025256e4e129019374b7aa9fce6a9d965291ed35f02c88baa7a47c5675b33b5d`
+- byte-level diff: 正確に 4 バイト (0x1206E-0x12071)
+- Size: 4194304 bytes (4 MB partition size)、変わらず
+
+## 想定される攻撃 chain 完成度
+
+```
+[段 1: BROM auth]             = OK (chip level で全 auth False、G-4 で実測)
+[段 2: preloader SBC gate]    = 本 patch で無効化(4 バイト)
+[段 3: LK seccfg unlock check] = Track D の patch で無効化(2 バイト)
+[段 4: preloader RSA verify]   = ★ 未確認、SBC gate と同じか別か
+                                 fcn.002066b4 (image_auth_main) を要 RE
+```
+
+**このパッチで通らない可能性**:
+
+- preloader の LK verify が SBC state gatekeeper とは別経路で走っている場合(独自 RSA check 等)。その場合は `fcn.002066b4` を分析して別途 patch が必要
+- GFH signature block(dump offset 0x11158, magic `88 16 88 58`)を preloader が起動時に自己 verify している可能性。その場合は再署名か GFH signature check の無効化が必要
+- BROM が preloader の CRC を verify している可能性(G-4 では chip auth False なので低確率)
+
+## 適用手順(復旧後)
+
+**リスク: 極めて高い**。preloader 焼き失敗 = brick 確定。以下は user 判断後の手順:
+
+1. 端末を BROM mode に(mtkclient で crash mode)
+2. **純正 preloader を手元に保険として保存済み確認** (`dump/preloader-boot0.img`, SHA256 `10d33a...`)
+3. patched preloader を焼く:
+   ```
+   sudo -E ./patches/apply-preloader-sbc-disable.sh apply
+   ```
+4. reboot、正常起動なら OK
+5. bootloop なら **BROM がまだ生きているか要確認**(mtkclient で reconnect 試行)、生きていれば rollback
+
+## Rollback
+
+BROM が生きていれば:
+```
+sudo -E ./patches/apply-preloader-sbc-disable.sh rollback
+```
+
+BROM も死んでいれば復旧不能。分解して eMMC を外し出す等の重い作業になる。
+
+## Ref
+
+- `logs/experiment-G1-preloader-structure.md` — 初期 RE(r2 でのみ実施)
+- `scratch/g1-preloader/ghidra-preloader-analysis.txt` — Ghidra 完全解析(SBC gate + DA verify + image_auth 群)
+- `scratch/g1-preloader/preloader.bin` — 抽出済み preloader payload
+- `patches/lk-seccfg-shortcut.patch` — 併用予定の LK patch (Track D)

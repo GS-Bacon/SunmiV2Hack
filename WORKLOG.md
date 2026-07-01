@@ -10,6 +10,111 @@
 
 ---
 
+## 2026-07-02 03:10 (main) — G-8 Track C 完了: preloader SBC-disable 4-byte patch 生成、Track D と併せて完全 chain 準備
+
+### 変更概要
+
+Track D で LK 側 seccfg check を無効化する patch を作った。今回 Track C で **preloader 側の SBC state gatekeeper を「常に return 0 (disabled)」に短絡** する patched preloader image を生成。**Track C + D の 2 段構成が揃った**、G-4 の mtkclient runtime patch と同じ効果を通常 boot でも維持する経路が完成。
+
+### 実施
+
+- preloader.bin (114 KB, 抽出済) を Ghidra base 0x00200F10 で auto-analyze(492 関数、33 秒)
+- G-1 で r2 が特定した `fcn.0021277c` の assembly を Ghidra dump で完全確認 → G-1 の結果と 100% 一致
+- `fcn.002027d4` (DA verify dispatcher)、`fcn.00214174` (eFuse bit1 reader)、image_auth 群も一括 dump
+
+### patch 詳細
+
+**Target**: `fcn.0021277c` (SBC state gatekeeper), VA 0x21277c-0x2127c1, 70 バイト
+
+**Assembly 前**:
+
+```
+0x0021277c  08 b5       push {r3, lr}
+0x0021277e  11 4b       ldr r3, [pc, #0x44]     ; DAT pointer
+0x00212780  7b 44       add r3, pc
+0x00212782  1b 68       ldr r3, [r3, #0]
+0x00212784  1b 68       ldr r3, [r3, #0]
+0x00212786  1a 68       ldr r2, [r3, #0]        ; r2 = SBC state
+0x00212788  11 2a       cmp r2, #0x11
+0x0021278a  18 d0       beq 0x2127be            ; → return 1 (ENFORCING)
+[以下略]
+```
+
+**4 バイト patch**:
+
+| Offset (preloader-boot0.img) | Original | Patched |
+|---|---|---|
+| 0x1206E | `11 4b` | `00 20` (movs r0, #0) |
+| 0x12070 | `7b 44` | `08 bd` (pop {r3, pc}) |
+
+**Assembly 後** (先頭 3 命令のみ実行、他は unreachable):
+```
+0x0021277c  08 b5       push {r3, lr}
+0x0021277e  00 20       movs r0, #0
+0x00212780  08 bd       pop {r3, pc}          ; return 0 (SBC DISABLED)
+```
+
+### 検証
+
+- Patched size: 4194304 bytes (4 MB) 純正と同一
+- byte diff: 正確に 4 バイト
+- Original SHA256: `10d33a52ce7ea88269dccea15cfb3180721b72070bd2a4eb96c1e3f5e86d6424`
+- Patched SHA256:  `025256e4e129019374b7aa9fce6a9d965291ed35f02c88baa7a47c5675b33b5d`
+
+### 完成した攻撃 chain(Track C + D)
+
+```
+[段 1: BROM auth]              = OK (chip-level 全 auth False、G-4 で実測)
+[段 2: preloader SBC gate]     = Track C の 4-byte patch で常時 disabled
+[段 3: LK seccfg unlock check] = Track D の 2-byte patch で常時 locked と誤認
+[段 4: preloader RSA verify]   = 未確認、Track C の patch で同時無効化する仮定
+```
+
+段 4(preloader RSA verify)については、`fcn.002066b4` (image_auth_main) を追加解析して確認するのが次のステップ。ただし現状の仮説は「LK verify が SBC gate を経由する」= Track C patch で同時無効化。
+
+### 主な変更ファイル
+
+- 新規: `scratch/preloader-patch/preloader-sbc-disable.img` — 4-byte patched preloader (4 MB, SHA256 上記)
+- 新規: `patches/preloader-sbc-disable.patch` — 完全 patch documentation
+- 新規: `patches/apply-preloader-sbc-disable.sh` — SHA256 verify 内蔵の flash script、"I ACCEPT THE RISK" 確認付き
+- 新規: `scratch/g1-preloader/ghidra-proj/` — Ghidra project (492 関数、auto-analyze 済)
+- 新規: `scratch/g1-preloader/ghidra-preloader-analysis.txt` — 7 関数の bytes + asm + decompile
+- 新規: `scratch/g1-preloader/ghidra-scripts/PreloaderAnalysis.py`
+
+### 実験の危険度
+
+**極めて高い**。preloader を焼くと:
+- 成功時: Track C+D の完全経路が確定、Sunmi V2 の secure boot chain を通常 boot で永続突破
+- 失敗時(preloader が boot しない): 電源リセットしても復旧できないので、mtkclient で BROM 復旧経路が唯一の生命線
+  - BROM が受け付ければ rollback で純正 preloader に戻せる
+  - BROM も受け付けなければ **brick 確定**、eMMC 物理外し等の分解修理
+
+### 適用の順序案(user 判断待ち)
+
+Option A(慎重、推奨):
+1. 復旧後、まず Track D の patched LK のみ焼いて挙動確認(reverse できる)
+2. 期待通り preloader が拒否した(bootloop)なら、preloader-side patch が必要と判明
+3. その時点で Track C の patched preloader を焼く判断を再検討
+
+Option B(即断):
+1. Track C + D 同時焼き、preloader 側の変化と組み合わせて実験
+2. brick リスクは 2 倍だが結論を最速化
+
+### 次のTODO
+
+1. **端末復旧**(引き続き放置または物理切断、優先度最高)
+2. 復旧後、Track D のみ試験(慎重派)
+3. `fcn.002066b4` (image_auth_main) を追加 Ghidra decompile して段 4 の詳細把握
+4. K-touch i9 stock LK zip の download(1.1 GB、事前準備)
+
+### 学び
+
+- **Ghidra headless + Jython で preloader も 33 秒で auto-analyze 完了**、LK と同じ workflow が両方に効く
+- **G-1 の r2 分析が Ghidra で 100% 一致再現**。G-1 時点で patch bytes まで特定できていた
+- **Sunmi の防御は「chip auth False + soft-level enforcement」**という設計 = ソフト patch のみで chain 全部倒せる可能性(preloader 焼き成功前提)
+
+---
+
 ## 2026-07-02 03:00 (main) — G-8 Track D 完了: seccfg-shortcut 2-byte patched LK 生成、復旧後即焼き準備完了
 
 ### 変更概要
