@@ -1,0 +1,8 @@
+fuse library not installed
+DaHandler - Sunmi V2 fix: target_config None, forcing preloader.init()
+Preloader - Status: Waiting for PreLoader VCOM, please reconnect mobile/iot device to brom mode
+Preloader
+Preloader - [LIB]: [31mStatus: Handshake failed, retrying...[0m
+Port - Handshake failed after retries
+Preloader
+Preloader - [LIB]: [31mStatus: Handshake failed, retrying...[0m

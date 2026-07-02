@@ -10,6 +10,100 @@
 
 ---
 
+## 2026-07-02 11:00 (main) — G-10 Phase 1: Track G v2 LK 焼き成功、Android 通常起動を実測
+
+### 変更概要
+
+G-8 で設計した **Track G v2 (LK 10 バイト patched)** を実 eMMC に焼いて、preloader → LK → boot.img → kernel → Android の chain が通ることを実測した。**Sunmi ロゴ → Android ホーム画面まで通常起動を確認**、Phase 2 (preloader v2 追加焼き) は不要。当初想定より低リスクで chain 通過達成。
+
+### 実測で確定した事実
+
+Track G v2 (10 バイト patched LK, SHA256 `c33e893a...`) を焼いた状態で:
+
+| 検証項目 | 実測結果 |
+|---|---|
+| preloader は patched LK を reject しない | ✅ bootloop 発生せず |
+| LK 内 SEC_POLICY gate 2 個の短絡が boot chain を壊さない | ✅ 正常起動 |
+| seccfg check 短絡が normal boot に影響しない | ✅ META mode に落ちない |
+| stock boot.img は Track G v2 LK を通る | ✅ Android 起動 |
+
+これで **LK が任意の boot.img を受け入れる状態** に到達。Android version up の最大の障壁だった LK boot verify が実質無効化された。
+
+### ★ Sunmi V2 の BROM 進入手段が確定
+
+G-9 復旧手順の副産物として、G-10 で **正常状態からの BROM 進入手段**が確定した:
+
+- **電源 OFF から USB 挿すだけ**(dafish7 手順、以前の WORKLOG 情報)= **今回は META mode (0e8d:20ff) に落ちる**。Android が正常 shutdown 状態だと preloader が meta USB 経路を選ぶため
+- **Vol- (音量下) or Vol+ (音量上) を押しながら USB 挿す** = **BROM mode (0e8d:0003) に確定的に落ちる**。mtkclient 公式ヒントで明記されていた("For brom mode, press and hold vol up, vol dwn, or all hw buttons")
+
+Sunmi V2 が bootloop していない状態(=通常起動できる状態)からの BROM 進入は Vol- combo が必須。
+
+### 使った mtkclient invocation(要 `--preloader` 明示)
+
+BROM 進入したうえで焼く場合、**stock preloader を `--preloader` で明示する必要**がある:
+
+```bash
+sudo PYTHONPATH=/home/bacon/.local/lib/python3.14/site-packages python3 tools/mtkclient/mtk.py w lk scratch/lk-patch/lk-full-shortcut.img --preloader dump/preloader-boot0.img
+```
+
+理由: BROM は DRAM 初期化を行わない。DA stage 2 は DRAM 上で動くので、preloader 経由の DRAM setup が必要。`--preloader` を明示すると mtkclient が stage 1 patch を効かせて preloader を使い DRAM を初期化し、その後 stage 2 に jump できる。**`--preloader` 無しだと "Jumping to stage 2..." で hang** する(実測で確認)。
+
+対して G-9 (bootloop cycle 状態) では、BROM ↔ preloader cycle が回っており、mtkclient が preloader mode を掴んで直接 DA を patch 可能だったため `--preloader` 不要だった。今回は正常起動状態からの Vol- 進入なので preloader が eMMC 上にあっても RAM にない、明示必須。
+
+### apply script の問題(記録用)
+
+`patches/apply-lk-full-shortcut.sh` は使わなかった。理由:
+
+1. `.venv/bin/python -m mtkclient` を使う設計だが、tools/mtkclient/.venv に `cryptography` module が欠落して起動しない
+2. `--stock` フラグを渡しているが、BROM 経路では逆に exploit が必要(unprotected device で bypass_security 経路)
+3. `--parttype` 未指定(preloader 焼き script のほう)、preloader が eMMC BOOT1/BOOT2 area にあることを反映していない
+
+対処: raw invocation を直接叩く方針を確立、apply script は後日修正するか deprecation する
+
+### mtkclient partition 位置(source 読み + 実測で確定)
+
+| Partition | 場所 | 焼き方 |
+|---|---|---|
+| `lk` | user area GPT sector 730112 (1MB) | `mtk w lk <img>`(default parttype=user)|
+| `boot` | user area GPT sector 734464 (24MB) | `mtk w boot <img>` |
+| `seccfg` | user area GPT | `mtk w seccfg <img>` |
+| `preloader` | eMMC BOOT1 + BOOT2(redundancy 2 面)| `mtk w preloader <img> --parttype=boot1` + `boot2` 両方 |
+
+### 検証
+
+- 焼き前 SHA256 (patched LK): `c33e893a10f6c38128aacef2912954b1ce737c67993d07af04b262823a28ec50`
+- 焼き成功 log: `logs/experiment-g8-phase1-w-lk-v2-attempt3.log`
+- 書き込み位置: sector 730112, 2048 sectors = 1 MB
+- `mtk reset` で preloader 再起動 → USB 抜き → 電源 ON で Sunmi ロゴ → Android 通常起動
+
+### 主な変更ファイル
+
+- 新規: `docs/g8-flash-experiment-plan.md` — 焼き試験のプラン全体(慎重派向けの Phase 分け設計)
+- 新規: `logs/experiment-g8-phase1-w-lk-v2.log` — 最初の試行(--preloader 無し、Jumping to stage 2 で hang)
+- 新規: `logs/experiment-g8-phase1-w-lk-v2-retry.log` — 2 回目(BROM post-connected state で handshake failed)
+- 新規: `logs/experiment-g8-phase1-w-lk-v2-attempt3.log` — 3 回目(--preloader 明示、成功)
+- 更新: `WORKLOG.md`(本エントリ)
+
+### 次のTODO
+
+1. **Phase 3(sanity check)**: `dump/new-boot-magisk.img` (Phase 3-3 で bootloop の元凶) を焼いて起動確認。通れば Track G v2 の効果が boot.img signature verify にも及んでいる証拠、GSI/AOSP boot.img 起動の道が確定
+2. Android アップグレード路線調査:
+   - Treble 対応確認(`mount` で /vendor 存在確認、`getprop ro.treble.enabled`)
+   - GSI 焼き試験の下調べ
+   - LineageOS port の候補調査(MT6739 系)
+3. dm-verity / AVB1 の実測(Phase 3 で得られる可能性大)
+
+### 教訓・学び
+
+- **mtkclient は entry 経路によって必要な引数が変わる**:
+  - preloader mode (0e8d:2000) 経由:preloader 引数不要、stock preloader が RAM 上で DRAM 初期化済
+  - BROM mode (0e8d:0003) 経由:`--preloader` 明示必須、DRAM 初期化のため
+- **Sunmi V2 の Vol- + USB 挿しが BROM 進入の "reliable" な手段**。 電源 OFF + USB 挿し(dafish7 手順)は Android 正常起動状態からは META mode に落ちるため使えない
+- **Track G v2 patch (10 バイト) は preloader を通る**。preloader の LK verify が SEC_POLICY 経由で行われ、その policy が G-8 Track F でも同じく短絡できることも意味する(次回 Phase 4 で確認可能)
+- **BROM は 1 セッションで完結させる**設計原則が改めて確認された。killed mtkclient の後、BROM "post-connected" state で subsequent handshake が通らず、物理リセット(電源長押し+ Vol combo)が必要
+
+---
+
 ## 2026-07-02 10:15 (main) — G-9 端末完全復旧: 電源長押しで BROM 復活 → 純正 LK + boot 書き戻し → Android 通常起動
 
 ### 変更概要
