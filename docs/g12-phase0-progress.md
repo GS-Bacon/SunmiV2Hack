@@ -8,7 +8,7 @@ build machine: `bacondata` (SSH `bacon@100.105.139.80`)
 | # | 内容 | 状態 | Doc |
 |---|---|---|---|
 | 0-A | Workspace + build tool 準備 | ✅ 完了 | [g12-phase0-workspace.md](./g12-phase0-workspace.md) |
-| 0-B | LineageOS 17.1 tree | 🔄 bacondata でバックグラウンド sync 起動済(2026-07-02 15:23)、shallow / --no-clone-bundle / --no-tags で最小化。完了確認は次セッション | `/home/bacon/sunmiandroid/lineage-17.1/` |
+| 0-B | LineageOS 17.1 tree | ✅ **完了**(2026-07-02 16:10 JST、所要 47 分、72GB / 784 project)。shallow + `--no-clone-bundle --no-tags --optimized-fetch` で最小化 | `/home/bacon/sunmiandroid/lineage-17.1/` |
 | 0-C | MT6739 kernel-4.4 base(Iscle BSP)+ baseline defconfig | ✅ tree 準備完了、build 中 | [g12-phase0-kernel-baseline.md](./g12-phase0-kernel-baseline.md) |
 | 0-D | K-touch i9 device tree + mtk_patches clone | ✅ 完了(単独 clone、統合は Phase 3)| [g12-phase0-device-tree.md](./g12-phase0-device-tree.md) |
 | 0-E | oz8806 charger と sunmi_/huaqin_ symbol 洗い出し | ✅ 完了(Ghidra RE 不要、MT6755 upstream 発見)| [g12-phase0-sunmi-patches.md](./g12-phase0-sunmi-patches.md) |

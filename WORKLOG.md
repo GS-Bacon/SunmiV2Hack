@@ -10,6 +10,53 @@
 
 ---
 
+## 2026-07-02 16:15 (main) — G-13 完結: Phase 0-B (LineageOS 17.1 sync) 完了確認、Phase 2 プラン策定
+
+### 変更概要
+
+前回セッション延長で起動した bacondata の LineageOS 17.1 shallow sync が **47 分で完了**、次セッションで Phase 3(device tree 統合、system.img build)に即着手可能な状態に。同時に Phase 2(Android 10 kernel port)の計画を `docs/g13-phase2-plan.md` に起こした。
+
+### 実測
+
+- 経過時間: 15:23 起動 → 16:10 完了 = **47 分**
+- Total size: **72GB**(shallow + no-clone-bundle + no-tags で最小化)
+- git repo 数: **784**(top-level 28 project)
+- 完了サイン: log 末尾に `REPO-SYNC-DONE-2026-07-02T07:10:53+00:00`
+- bacondata disk: 使用 113GB / 464GB(残 351GB、Phase 3 の system.img build 用に十分)
+- 途中トラブル: 初期起動時の `bash -c "..."` 改行問題で古い repo sync が残留、その `.lock` 汚染で新 sync が固まった。SIGTERM → SIGKILL + lock 全掃除 + `-j2 --retry-fetches=3` で仕切り直して回復
+
+### Phase 2 プラン(新規)
+
+`docs/g13-phase2-plan.md` に策定:
+
+- **本命 zImage への近道は Phase 1a-5 完全化ではなく Phase 2 に前倒し**(kernel-4.9/4.14 は modern toolchain 対応済、build 詰まりが Phase 1a より圧倒的に少ない見込み)
+- Kernel base: **`Power535/android_kernel_common_MT6763`**(Android 10 用、MT6580/6737/6739/6763/6761/6762/6771 対応 multi-SoC、kernel-4.9)
+- Phase 1a の driver 6 ファイル + `mt6755-to-mt6739-api-port.patch` を新 tree に移植(kernel 4.4 → 4.9 差分は小さいと想定)
+- Android 10 config(FBE、SAR、AVB=off、boot.img v2 header)
+- 検証は zImage + dtb + `boot-v2.img` 生成まで、実機焼き(Phase 1b)は依然範囲外
+
+### 主な変更ファイル
+
+- 更新: `docs/g12-phase0-progress.md`(0-B を「完了」に、実測値記入)
+- 新規: `docs/g13-phase2-plan.md`(Phase 2 = Android 10 kernel port の詳細プラン)
+- 更新: `WORKLOG.md`(本エントリ)
+
+### 次のTODO(次セッション)
+
+1. Phase 2-A: Power535/MT6763 tree clone、`mt6739_defconfig` variant 探索
+2. Phase 2-B: Phase 1a driver 6 個を新 tree に移植、build 通し
+3. Phase 2-C: Android 10 用 kernel config(FBE / SAR / AVB=off)
+4. Phase 2-D: boot.img v2 header + SAR ramdisk 生成、既存 stock boot.img の kernel 部分と入替え
+5. その後 Phase 3(LineageOS device tree 統合)は sync 済 tree で開始可能
+
+### 教訓・学び
+
+- **shallow sync は非常に高効率**: LineageOS 17.1(default full ~100-150GB)が `--depth=1 --no-clone-bundle --no-tags --optimized-fetch` で 72GB に抑えられた + 47 分完了。Phase 3 で必要な history は現時点ゼロなので shallow で十分
+- **自作 pgrep パターンが自己マッチする罠**: `pgrep -f repo-sync.sh` を使った until ループを `bash -c` 経由で起動すると、pgrep 自身のコマンドライン(内側の `bash -c "... repo-sync.sh ..."`)にマッチして無限ループ。log tail や process 数の変化で判定する方が確実
+- **repo は非 TTY で --quiet が全出力抑制**: nohup 経由起動だと log が 0 byte になり進捗が見えない。disk 使用量 + git worker 数 + 完了 marker(script 末尾の echo REPO-SYNC-DONE)で監視
+
+---
+
 ## 2026-07-02 15:25 (main) — G-13 追加: Phase 1a-3 100% 完成(oz8806_battery.o clean compile)+ Phase 0-B (LineageOS 17.1 sync) バックグラウンド起動
 
 ### 変更概要
