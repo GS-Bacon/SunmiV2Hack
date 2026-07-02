@@ -1,0 +1,15 @@
+### /sys/firmware/devicetree/base/spi@1100a000/compatible ###
+00000000: 6d65 6469 6174 656b 2c6d 7436 3733 392d  mediatek,mt6739-
+00000010: 7370 6900                                spi.
+### /sys/firmware/devicetree/base/spi@1100a000/reg ###
+00000000: 0000 0000 1100 a000 0000 0000 0000 1000  ................
+### /sys/firmware/devicetree/base/spi@1100a000/interrupts ###
+00000000: 0000 0000 0000 0076 0000 0008            .......v....
+### /sys/firmware/devicetree/base/spi@1100a000/clocks ###
+00000000: 0000 002c 0000 000a 0000 002c 0000 0030  ...,.......,...0
+00000010: 0000 001c 0000 001b                      ........
+### /sys/firmware/devicetree/base/spi@1100a000/clock-names ###
+00000000: 7061 7265 6e74 2d63 6c6b 0073 656c 2d63  parent-clk.sel-c
+00000010: 6c6b 0073 7069 2d63 6c6b 00              lk.spi-clk.
+### /sys/firmware/devicetree/base/spi@1100a000/mediatek,pad-select ###
+00000000: 0000 0000                                ....

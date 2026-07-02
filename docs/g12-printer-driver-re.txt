@@ -1,0 +1,121 @@
+Sunmi V2 kernel (Linux 4.4.22+, MT6739) — thermal printer driver RE
+Binary: /tmp/vmlinux-41cf.bin (21274624 bytes, raw decompressed vmlinux)
+Load base (virtual): 0xC0008000  (PAGE_OFFSET=0xC0000000, TEXT_OFFSET=0x8000)
+
+=== FUNCTION ADDRESSES (all virtual) ===
+[printer_gpio driver — file: drivers/misc/spi_printer.c or paired odm_printer_gpio.c]
+0xC03BBEE8  create_sunmi_sysfs             (creates "sunmi" kset + "ctrl" kobject in /sys/)
+0xC0857D0C  block_cts_store                (stub — just returns count)
+0xC0857D20  block_rts_store                (stub)
+0xC0857D34  busy_cts_store                 (stub)
+0xC0857D48  busy_rts_store                 (stub)
+0xC0857D5C  hardware_free_store            (stub)
+0xC0857E70  hardware_free_show             (wake_up: sets pdata+0x1c=1, pdata+0x20=1 → releases block_rts/cts)
+0xC0857EC8  gpio_oe_level_status_store     (write-only; parses hex, calls gpio_direction_input/output on level_status)
+0xC0858098  power_store                    (kstrtoint, gpio_set_value(pdata->pwr_en))
+0xC0858110  lvl_en_store                   (kstrtoint, gpio_set_value(pdata->lvl_en))
+0xC0858188  resume_store                   (kstrtoint, gpio_set_value(pdata->gpio_resume))
+0xC0858200  sleep_store                    (kstrtoint, gpio_set_value(pdata->gpio_sleep))
+0xC0858278  reset_store                    (kstrtoint, gpio_set_value(pdata->gpio_mcu_reset))
+0xC08582D4  power_show                     (gpio_get_value(pdata->pwr_en) at pdata+0x18)
+0xC0858310  lvl_en_show                    (gpio_get_value(pdata->lvl_en) at pdata+0x14)
+0xC085834C  resume_show                    (pdata+0x0c)
+0xC0858388  sleep_show                     (pdata+0x08)
+0xC08583C4  reset_show                     (pdata+0x10)
+0xC0858400  busy_rts_show                  (pdata+0x04)
+0xC085843C  busy_cts_show                  (pdata+0x00)
+0xC0858478  block_rts_show                 (waits on pdata+0x1c/waitqueue @ +0x14)
+0xC08584FC  block_cts_show                 (waits on pdata+0x20/waitqueue @ +0x18)
+0xC0858990  printer_gpio_probe             (parse_dt → alloc pdata → gpio_request_one×5 → request_irq×2 → create_sunmi_sysfs → sysfs_create_group)
+
+[spi_printer]
+0xC0858A60  mcu_version_show               (SPI transaction that reads MCU firmware version)
+0xC085898C  mcu_version_store              (writes SPI command)
+0xC0858DB8  spi_msg_store or spi_msg_show  (bulk SPI TX; loops calling spi_sync)
+0xC0859AF4  spi_msg_show/store paired
+0xC0859D74  spi_printer_probe              (kzalloc(0x78) → class_cdev_init → device_create "spidev%d.%d" → regmap init)
+0xC0859EE8  class_cdev_init                (cdev_init + cdev_add + class_create "spidev")
+0xC0859F7C  (short helper — refcount)
+0xC0859FE8  spi_dev_ioctl                  (SPI_IOC_RD/WR_MODE, LSB_FIRST, BITS_PER_WORD, MAX_SPEED_HZ + SPI_IOC_MESSAGE via spi_dev_message)
+                                            source lines: 0x17d=381 mode, 0x18e=398 lsb_first, 0x19b=411 bits/word, 0x1a8=424 max_speed
+0xC085???? spi_dev_open (referenced at lines 0x1ed=493, 0x1f4=500, 0x1fd=509 in spi_printer.c)
+
+=== STRINGS ===
+0xC0F7D2C3  "printer_pin"
+0xC0F7D2CF  "6Now in %s
+"                    (KERN_INFO)
+0xC0F7D2DE  "3odm_printer_gpio driver only supports device tree probe"
+0xC0F7D317  "printer,irq0"
+0xC0F7D324  "printer,irq1"
+0xC0F7D331  "printer,sleep"
+0xC0F7D33F  "printer,resume"
+0xC0F7D34E  "printer,mcu_reset"
+0xC0F7D360  "printer,lvl_en"
+0xC0F7D36F  "printer,pwr_en"
+0xC0F7D421  "GH1"                             (IRQ 0 handler tag)
+0xC0F7D45E  "GH2"                             (IRQ 1 handler tag)
+0xC0F7D630  "gpio_oe_level_status"
+0xC0F7D645  "hardware_free"
+0xC0F7D653  "busy_rts"
+0xC0F7D65C  "busy_cts"
+0xC0F7D665  "block_rts"
+0xC0F7D66F  "block_cts"
+0xC0F7D686  "PRINTER %s
+"
+0xC0F7D692  "spi mode is 0x%x,spi->max_speed_hz is %d, spi->bits_per_word is %d
+"
+0xC0F7D6D6  "printer spi_msg_store
+"
+0xC0F7D6ED  "spi_dev: nothing for minor %d
+"
+0xC0F7D70C  "open/ENOMEM
+"
+0xC0F7D719  "spi mode %x
+"
+0xC0F7D726  "%csb first
+"                    (%c = 'l' or 'm')
+0xC0F7D732  "%d bits per word
+"
+0xC0F7D744  "%d Hz (max)
+"
+0xC0F7D751  "spidev"                          (class name)
+0xC0F7D7A8  "PRINTER %s set spi success
+"
+0xC0F7D7C4  "&spi_dev->buf_lock"
+0xC0F7D7D7  "spidev%d.%d"                     (dev name template)
+0xC0F7D7E3  "chiguoqing DSB:status=%d 
+"
+0xC0F7D812  "spi_printer"                     (driver name)
+0xC0F7D81E  ".../drivers/misc/spi_printer.c"
+0xC0F7D879  "mcu_version"                     (sysfs attr in ctrl kobj)
+0xC0F7D88D  "syscon"
+
+=== SYSFS DEVICE_ATTR TABLE @ 0xC13A3D5C (11 entries, 16-byte stride) ===
+[0] gpio_oe_level_status  mode=0644  show=NULL              store=0xC0857EC8
+[1] power                 mode=0664  show=0xC08582D4        store=0xC0858098
+[2] lvl_en                mode=0664  show=0xC0858310        store=0xC0858110
+[3] resume                mode=0664  show=0xC085834C        store=0xC0858188
+[4] sleep                 mode=0664  show=0xC0858388        store=0xC0858200
+[5] reset                 mode=0664  show=0xC08583C4        store=0xC0858278
+[6] hardware_free         mode=0664  show=0xC0857E70        store=0xC0857D5C
+[7] busy_rts              mode=0664  show=0xC0858400        store=0xC0857D48
+[8] busy_cts              mode=0664  show=0xC085843C        store=0xC0857D34
+[9] block_rts             mode=0664  show=0xC0858478        store=0xC0857D20
+[10] block_cts            mode=0664  show=0xC08584FC        store=0xC0857D0C
+Attribute group array-ptr table starts at 0xC13A3D40.
+
+=== ADDITIONAL SYSFS ATTR (mcu_version in ctrl kset) @ 0xC13A4308 ===
+name=0xC0F7D879 "mcu_version"  mode=0644  show=0xC0858A60  store=0xC085898C
+
+=== INFERRED pdata (printer_gpio_data) STRUCT LAYOUT ===
+offset  field
+0x00    gpio_cts             (input, irq0)
+0x04    gpio_rts             (input, irq1)
+0x08    gpio_sleep           (output)
+0x0c    gpio_resume          (output)
+0x10    gpio_mcu_reset       (output)
+0x14    gpio_lvl_en          (output) + wait_queue_head for block_rts
+0x18    gpio_pwr_en          (output) + wait_queue_head for block_cts
+0x1c    block_rts_flag       (u32, 0=blocked, 1=free)
+0x20    block_cts_flag       (u32)
+(remaining fields: sysfs group root, mutex, kobject, misc_device)

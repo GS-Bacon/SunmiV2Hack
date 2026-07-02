@@ -1,0 +1,2 @@
+=== /sys/firmware/devicetree/base/printer_pin/* ===
+xxd: /sys/firmware/devicetree/base/printer_pin/*: No such file or directory

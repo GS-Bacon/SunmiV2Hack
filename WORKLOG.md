@@ -10,6 +10,76 @@
 
 ---
 
+## 2026-07-02 13:15 (main) — G-12: dm-verity 潰し確定、SELinux 全 permissive 化、printer 全経路健全、Android 10 移植計画確定
+
+### 変更概要
+
+3 つの決着ステップを完了:
+
+1. **noverity boot が実運用で稼働している事を確認**(mount 出力で /system が dm-0 経由ではなく raw partition から直接)= G-10 Phase 3 の bootloop 原因は dm-verity ではなく **Magisk-patched boot が壊してた**
+2. **SELinux 全 domain permissive 化**(libsepol 自前 patcher で 1625/1657 types に permissive flag 立て、ramdisk 内 sepolicy 差し替え)+ default.prop の `ro.secure=0`、`ro.debuggable=1`、boot header cmdline に `androidboot.selinux=permissive` 追加 = printer sysfs 全属性アクセス開通
+3. **printer 経路端まで健全確認**:factory activity `com.yha.factory/.activity.Printer` を mtk-su 経由起動 → `printerVersion: 1.14`(MCU firmware 応答)+ 物理印刷成功
+
+### 判明した重要事実(Android 10 化に直結)
+
+#### printer driver 完全仕様(kernel binary Ghidra RE + live DTB 実測)
+
+- source: Sunmi 内部 tree `drivers/misc/spi_printer.c`(500 LoC、spidev.c fork)+ `odm_printer_gpio.c`(250 LoC)
+- **依存 API は generic Linux のみ**、mt_gpio.h / mtk_spi.h に依存しない = kernel 4.4 → 4.9/4.14 移植で API 差分 < 30 行と推定
+- DTB spec:
+  - **SPI@1100a000**(Sunmi patch で MT6739 に追加した 4 個目の bus、`mediatek,mt6739-spi` 標準 driver 流用)、IRQ 118 level triggered
+  - **spi_printer@0**: compatible `huaqin,sunmi_printer`、CS 0、max 50 MHz
+  - **gpio_printer** node、compatible `summi,printer_gpio`(出荷済 typo)、pinctrl phandle 0x0e、GPIO 番号:
+    - pwr_en=7 / mcu_reset=8 / lvl_en=11 / sleep=17 / irq1=19 / resume=27 / irq0=28
+- SELinux 独自 type: `printer_dev_{power,reset,sleep,resume}`, `printer_spi_device`
+- 併発する Sunmi patch: `oz8806` charger(電池認識に必須)
+
+#### 環境全容
+
+- BROM chain 完全突破済(preloader Track F v2 + LK Track G v2)
+- dm-verity 潰し確定(fstab の `verify` 削除で解決)
+- SELinux permissive 常態化(sepolicy 全 permissive)
+- Sunmi V2 は **pre-Treble**(/vendor は /system/vendor symlink、/vendor/etc/vintf 無し)、arm32 zImage kernel、Cortex-A53(aarch64 可能だが 32-bit 選択)
+- MT6739 Android 10 実績あり:PeterCxy K-touch i9 用 LineageOS 17.0(arm64, prebuilt kernel)
+
+### Android 10 移植計画(要約)
+
+- 32-bit 貫徹、K-touch i9 tree を arm32 に retarget
+- 3 トラック並行:kernel port(spi_printer + odm_printer_gpio クリーンルーム書き起こし + DTS 追加 + oz8806 charger RE)、userland(LineageOS 17.1 base + Sunmi apps 温存)、boot(header v2 SAR 化)
+- 詳細:`docs/g12-android10-port-plan.md`(新規)
+
+### 主な変更ファイル
+
+- 新規: `tools/permissive-all.c`(libsepol 使用の sepolicy 全 domain permissive patcher)
+- 新規: `tools/permissive-all`(build 済 binary)
+- 新規: `scratch/bootimg-tool.py` 使い方一貫化、`scratch/cpio-replace.py`(size-changing cpio 書き換え)
+- 新規: `scratch/sepolicy-permissive`, `scratch/default-permissive.prop`, `scratch/ramdisk-permissive.{cpio,gz}`, `scratch/boot-permissive.img`, `scratch/boot-permissive2.img`(flash 済)
+- 新規: `docs/g12-android10-port-plan.md`(Android 10 移植計画本体)
+- 新規: `logs/g12-permissive/`(adb 収集全ログ、DTB 実測、kallsyms、printer 属性、services)
+- 新規: `scratch/g12-printer-re/addresses.txt`(vmlinux RE の関数マップ、Ghidra エージェント成果)
+- 新規: `logs/experiment-g12-w-boot-permissive*.log`, `logs/experiment-g12-reset.log`
+- 更新: `WORKLOG.md`(本エントリ)
+
+### 次の TODO
+
+Android 10 移植は端末不要の作業から。優先順位:
+
+1. **Phase 0**(端末不要):LineageOS 17.1 source tree の repo init、K-touch i9 device tree の fork、Iscle OrangePi 8.1 BSP から MT6739 kernel-4.4 tree 抽出、arm32 config で空 build 通す
+2. **Phase 0 続**:Ghidra ボリューム RE で `oz8806` charger driver 書き起こし + 他の Sunmi patches(kallsyms から `sunmi_*` / `huaqin_*` 全 symbol 一覧)
+3. **Phase 1**:spi_printer.c + odm_printer_gpio.c を kernel-4.4 tree に組み込み、Android 8.1 で試験 build → 実機 flash → factory print test で動作確認
+4. **Phase 2 以降**:Android 10 kernel、SAR ramdisk、LineageOS 17.1 system.img 建て
+
+計画詳細と参考実装 repo 一覧は `docs/g12-android10-port-plan.md` を参照。
+
+### 教訓・学び
+
+- **cmdline `androidboot.selinux=permissive` は user build では無視される**(SUW build type check)、sepolicy binary の permissive flag 直接立てるのが正解
+- **printer driver の依存が非常に薄い**(generic Linux GPIO/SPI API のみ)= kernel 移植の難所は driver 移植ではなく Sunmi/Huaqin の他 patches(charger、sysfs helper)洗い出しの方が大変
+- **factory test は `com.yha.factory` パッケージ**(YHA = Huaqin ODM の内部コード)、Printer / TP / PSN 等 hardware 別の activity を持つ。今後の hardware bring-up 確認で再利用可
+- **mtk-su -c は execvp で単一 binary 起動**(shell 経由不可)、script path 渡すのが正解
+
+---
+
 ## 2026-07-02 12:00 (main) — G-10 Phase 3: Track G v2 LK でも Magisk-patched boot は通らず、切り分け実験が次の焦点
 
 ### 変更概要

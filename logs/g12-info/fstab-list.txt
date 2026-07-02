@@ -1,0 +1,10 @@
+find: No /system/lost+found: Permission denied
+find: /system/bin/audioserver: Permission denied
+find: /system/bin/blkid: Permission denied
+find: /system/bin/bootstat: Permission denied
+find: /system/bin/btlogd: Permission denied
+find: /system/bin/cameraserver: Permission denied
+find: /system/bin/devicelogd: Permission denied
+find: /system/bin/e2fsck: Permission denied
+find: /system/bin/fsck.f2fs: Permission denied
+find: /system/bin/fsck_msdos: Permission denied

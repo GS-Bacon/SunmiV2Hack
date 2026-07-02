@@ -1,0 +1,7 @@
+18	idlemonitor: [com.sunmi.os.IDeviceIdleMonitor]
+25	print: [android.print.IPrintManager]
+26	sunmi_system_server: []
+27	sunmi_perception_service: []
+28	sunmi_prop_service: []
+29	sunmi_ntp_service: []
+78	sunmi_customer: [android.app.sunmi.ISunmiCustomerManager]

@@ -1,0 +1,6 @@
+1
+0
+0
+0
+1
+10/system/bin/sh: cat: /sys/printer_pin/printer/gpio_oe_level_status: I/O error

@@ -1,0 +1,34 @@
+crw-rw-rw-  1 root      root         235,   0 2026-07-02 12:48 spidev0.0
+crw-------  1 root      root         204, 209 2026-07-02 12:48 ttyMT0
+crw-rw----  1 system    system       204, 210 2026-07-02 12:48 ttyMT1
+---
+total 0
+drwxr-xr-x 2 root root 720 2026-07-02 12:48 .
+drwxr-xr-x 4 root root 840 2026-07-02 12:48 ..
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 boot -> /dev/block/mmcblk0p27
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 boot_para -> /dev/block/mmcblk0p1
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 cache -> /dev/block/mmcblk0p33
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 efuse -> /dev/block/mmcblk0p15
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 expdb -> /dev/block/mmcblk0p4
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 frp -> /dev/block/mmcblk0p5
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 gz1 -> /dev/block/mmcblk0p20
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 gz2 -> /dev/block/mmcblk0p21
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 lk -> /dev/block/mmcblk0p23
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 lk2 -> /dev/block/mmcblk0p24
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 loader_ext1 -> /dev/block/mmcblk0p25
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 loader_ext2 -> /dev/block/mmcblk0p26
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 logo -> /dev/block/mmcblk0p28
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 mcupmfw -> /dev/block/mmcblk0p19
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 md1dsp -> /dev/block/mmcblk0p17
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 md1img -> /dev/block/mmcblk0p16
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 metadata -> /dev/block/mmcblk0p8
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 nvcfg -> /dev/block/mmcblk0p6
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 nvdata -> /dev/block/mmcblk0p7
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 nvram -> /dev/block/mmcblk0p22
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 para -> /dev/block/mmcblk0p3
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 persist -> /dev/block/mmcblk0p12
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 proinfo -> /dev/block/mmcblk0p14
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 protect1 -> /dev/block/mmcblk0p9
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 protect2 -> /dev/block/mmcblk0p10
+lrwxrwxrwx 1 root root  20 2026-07-02 12:48 recovery -> /dev/block/mmcblk0p2
+lrwxrwxrwx 1 root root  21 2026-07-02 12:48 sec1 -> /dev/block/mmcblk0p13

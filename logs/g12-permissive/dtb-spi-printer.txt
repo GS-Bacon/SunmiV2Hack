@@ -1,0 +1,11 @@
+### /sys/firmware/devicetree/base/spi@1100a000/spi_printer@0/compatible ###
+00000000: 6875 6171 696e 2c73 756e 6d69 5f70 7269  huaqin,sunmi_pri
+00000010: 6e74 6572 00                             nter.
+### /sys/firmware/devicetree/base/spi@1100a000/spi_printer@0/name ###
+00000000: 7370 695f 7072 696e 7465 7200            spi_printer.
+### /sys/firmware/devicetree/base/spi@1100a000/spi_printer@0/reg ###
+00000000: 0000 0000                                ....
+### /sys/firmware/devicetree/base/spi@1100a000/spi_printer@0/spi-max-frequency ###
+00000000: 02fa f080                                ....
+### /sys/firmware/devicetree/base/spi@1100a000/spi_printer@0/status ###
+00000000: 6f6b 6179 00                             okay.

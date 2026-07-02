@@ -1,0 +1,48 @@
+=== last_kmsg (previous boot dmesg) ===
+-r--r----- 1 system log  0 2026-07-02 11:40 /proc/last_kmsg
+
+/sys/fs/pstore/:
+total 0
+drwxr-xr-x 2 root root 0 2026-07-02 11:28 .
+drwxr-xr-x 7 root root 0 2026-07-02 11:28 ..
+ram console header, hw_status: 0, fiq step 0.
+Not Clear, old status is 0.
+
+=== pstore console-ramoops ===
+/data/local/tmp/rooted-diag.sh[7]: cat: /sys/fs/pstore/console-ramoops-0: No such file or directory
+
+=== /data/mrdump listing ===
+ls: /data/mrdump/: No such file or directory
+
+=== Sunmi-specific stuff in /system ===
+ls: /system/sunmi*: No such file or directory
+ls: /system/lib/sunmi*: No such file or directory
+ls: /system/bin/sunmi*: No such file or directory
+-rw-r--r-- 1 root root 7618 2009-01-01 01:00 /system/etc/sunmi-apns-conf.xml
+-rw-r--r-- 1 root root 1969 2009-01-01 01:00 /system/etc/sunmi_devices.xml
+/system/app/SunmiAppStore_v7.3.5_market_pro_release
+/system/app/SunmiAppStore_v7.3.5_market_pro_release/SunmiAppStore_v7.3.5_market_pro_release.apk
+/system/app/SunmiCalculator_v3.1.6_pro_release
+/system/app/SunmiCalculator_v3.1.6_pro_release/SunmiCalculator_v3.1.6_pro_release.apk
+/system/app/SunmiCustomSideKey_v1.6.4_release
+/system/app/SunmiCustomSideKey_v1.6.4_release/SunmiCustomSideKey_v1.6.4_release.apk
+/system/app/SunmiDataService_v4.1.37_sunmi_release
+/system/app/SunmiDataService_v4.1.37_sunmi_release/SunmiDataService_v4.1.37_sunmi_release.apk
+/system/app/SunmiDocumentsUI_v3.0.16_pro_release
+/system/app/SunmiDocumentsUI_v3.0.16_pro_release/SunmiDocumentsUI_v3.0.16_pro_release.apk
+/system/app/SunmiGallery_v3.0.94_pro_release
+/system/app/SunmiGallery_v3.0.94_pro_release/SunmiGallery_v3.0.94_pro_release.apk
+/system/app/SunmiLogTool_v3.1.1_android_7_Release
+/system/app/SunmiLogTool_v3.1.1_android_7_Release/SunmiLogTool_v3.1.1_android_7_Release.apk
+/system/app/SunmiOpenService_v2.2.0_android_7_Release
+/system/app/SunmiOpenService_v2.2.0_android_7_Release/SunmiOpenService_v2.2.0_android_7_Release.apk
+/system/app/SunmiPaymentManager_v1.3.13_release
+/system/app/SunmiPaymentManager_v1.3.13_release/SunmiPaymentManager_v1.3.13_release.apk
+/system/app/SunmiPaymentNF_Mobile_m1.6.06_release
+/system/app/SunmiPaymentNF_Mobile_m1.6.06_release/SunmiPaymentNF_Mobile_m1.6.06_release.apk
+
+=== init binary version ===
+
+=== check for veritymode override ===
+
+=== check for boot-time tamper detection scripts ===

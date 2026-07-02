@@ -1,0 +1,49 @@
+[   79.300035]  (0)[313:logd.auditd]type=1400 audit(1782964180.468:46): avc: denied { read } for pid=2745 comm="sh" name="power" dev="sysfs" ino=17368 scontext=u:r:shell:s0 tcontext=u:object_r:printer_dev_power:s0 tclass=file permissive=1
+[   79.301645]  (0)[313:logd.auditd]type=1400 audit(1782964180.468:47): avc: denied { open } for pid=2745 comm="sh" path="/sys/printer_pin/printer/power" dev="sysfs" ino=17368 scontext=u:r:shell:s0 tcontext=u:object_r:printer_dev_power:s0 tclass=file permissive=1
+[   79.302231]  (0)[313:logd.auditd]type=1400 audit(1782964180.468:48): avc: denied { read } for pid=2745 comm="sh" name="reset" dev="sysfs" ino=17364 scontext=u:r:shell:s0 tcontext=u:object_r:printer_dev_reset:s0 tclass=file permissive=1
+[   79.302722]  (0)[313:logd.auditd]type=1400 audit(1782964180.468:49): avc: denied { open } for pid=2745 comm="sh" path="/sys/printer_pin/printer/reset" dev="sysfs" ino=17364 scontext=u:r:shell:s0 tcontext=u:object_r:printer_dev_reset:s0 tclass=file permissive=1
+[   79.303200]  (0)[313:logd.auditd]type=1400 audit(1782964180.468:50): avc: denied { read } for pid=2745 comm="sh" name="sleep" dev="sysfs" ino=17365 scontext=u:r:shell:s0 tcontext=u:object_r:printer_dev_sleep:s0 tclass=file permissive=1
+[   79.303708]  (0)[313:logd.auditd]type=1400 audit(1782964180.468:51): avc: denied { open } for pid=2745 comm="sh" path="/sys/printer_pin/printer/sleep" dev="sysfs" ino=17365 scontext=u:r:shell:s0 tcontext=u:object_r:printer_dev_sleep:s0 tclass=file permissive=1
+[   79.304171]  (0)[313:logd.auditd]type=1400 audit(1782964180.468:52): avc: denied { read } for pid=2745 comm="sh" name="resume" dev="sysfs" ino=17366 scontext=u:r:shell:s0 tcontext=u:object_r:printer_dev_resume:s0 tclass=file permissive=1
+[   79.304652]  (0)[313:logd.auditd]type=1400 audit(1782964180.468:53): avc: denied { open } for pid=2745 comm="sh" path="/sys/printer_pin/printer/resume" dev="sysfs" ino=17366 scontext=u:r:shell:s0 tcontext=u:object_r:printer_dev_resume:s0 tclass=file permissive=1
+[   79.306424]  (1)[313:logd.auditd]type=1400 audit(1782964180.468:55): avc: denied { open } for pid=2745 comm="sh" path="/sys/printer_pin/printer/lvl_en" dev="sysfs" ino=17367 scontext=u:r:shell:s0 tcontext=u:object_r:sysfs:s0 tclass=file permissive=1
+[   80.999431]  (1)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   80.999517]  (1)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[   81.016029]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   81.016116]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[   81.044478]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   81.044567]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[   81.072454]  (3)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   81.072541]  (3)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[   91.020047]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   91.020129]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[   91.035806]  (1)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   91.035889]  (1)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[   91.064109]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   91.064191]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[   91.101282]  (3)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   91.101364]  (3)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[  101.039002]  (1)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  101.039083]  (1)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[  101.056772]  (1)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  101.056861]  (1)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[  101.083367]  (3)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  101.083449]  (3)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[  101.105275]  (3)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  101.105522]  (3)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8150,sunmi_constant_voltage is :8438000
+[  111.066539]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  111.066626]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8166,sunmi_constant_voltage is :8438000
+[  111.085352]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  111.085474]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8166,sunmi_constant_voltage is :8438000
+[  111.122419]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  111.122505]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8166,sunmi_constant_voltage is :8438000
+[  111.148264]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  111.148352]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8166,sunmi_constant_voltage is :8438000
+[  121.098594]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  121.098675]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8186,sunmi_constant_voltage is :8438000
+[  121.114330]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  121.114458]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8186,sunmi_constant_voltage is :8438000
+[  121.148122]  (0)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  121.148158]  (0)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8186,sunmi_constant_voltage is :8438000
+[  121.185611]  (2)[247:charger_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[  121.185690]  (2)[247:charger_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8186,sunmi_constant_voltage is :8438000

@@ -1,0 +1,25 @@
+/vendor/etc/init/:
+total 56
+drwxr-xr-x  2 root shell 4096 2009-01-01 01:00 .
+drwxr-xr-x 16 root shell 4096 2009-01-01 01:00 ..
+-rw-r--r--  1 root root   484 2009-01-01 01:00 init.bip.rc
+-rw-r--r--  1 root root  1269 2009-01-01 01:00 init.volte_imsm_93.rc
+-rw-r--r--  1 root root  1242 2009-01-01 01:00 init.wod.rc
+-rw-r--r--  1 root root   106 2009-01-01 01:00 mobile_log_d.rc
+-rw-r--r--  1 root root   267 2009-01-01 01:00 rild.rc
+---
+ls: /vendor/etc/vintf/: No such file or directory
+---
+total 6328
+drwxr-xr-x 2 root shell u:object_r:system_file:s0    4096 2009-01-01 01:00 .
+drwxr-xr-x 6 root shell u:object_r:system_file:s0    8192 2009-01-01 01:00 ..
+-rw-r--r-- 1 root root  u:object_r:system_file:s0 1707968 2009-01-01 01:00 audio.primary.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0   34532 2009-01-01 01:00 audio.usb.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0   46688 2009-01-01 01:00 camera.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0   46872 2009-01-01 01:00 gps.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0   64972 2009-01-01 01:00 gralloc.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0  419616 2009-01-01 01:00 hwcomposer.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0   18076 2009-01-01 01:00 lights.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0   13984 2009-01-01 01:00 memtrack.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0   18352 2009-01-01 01:00 power.mt6739.so
+-rw-r--r-- 1 root root  u:object_r:system_file:s0  838532 2009-01-01 01:00 vulkan.mt6739.so

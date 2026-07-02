@@ -1,0 +1,200 @@
+[   72.482237]  (0)[332:surfaceflinger][DISP]HRT D0/M1/LN4/hrt_num:2/G(-1,-1)
+[   72.482273]  (0)[332:surfaceflinger][DISP]L0->0/of(0,0)/swh(0,0)/dwh(720,1440)/fmt:0xb04/ext:-1
+[   72.482312]  (0)[332:surfaceflinger][DISP]L1->1/of(0,0)/swh(0,0)/dwh(720,1440)/fmt:0x604/ext:-1
+[   72.482350]  (0)[332:surfaceflinger][DISP]L2->2/of(0,0)/swh(0,0)/dwh(720,48)/fmt:0x604/ext:-1
+[   72.482389]  (0)[332:surfaceflinger][DISP]L3->3/of(0,1344)/swh(0,0)/dwh(720,96)/fmt:0x604/ext:2
+[   72.482428]  (0)[332:surfaceflinger][DISP]HRT D1/M0/LN0/hrt_num:2/G(-1,-1)
+[   72.484904]  (0)[332:surfaceflinger]fence/P+/P0/L8/id687/fd89
+[   72.485361]  (0)[332:surfaceflinger]fence/P+/P0/L0/id687/fd105/mva0x01300000/size0x0040b000
+[   72.485525]  (0)[332:surfaceflinger]fence/P+/P0/L1/id314/fd105/mva0x01800000/size0x0040b000
+[   72.485644]  (0)[332:surfaceflinger]fence/P+/P0/L2/id314/fd105/mva0x00e00000/size0x00023000
+[   72.485759]  (0)[332:surfaceflinger]fence/P+/P0/L3/id215/fd105/mva0x00a00000/size0x00045000
+[   72.487753]  (2)[378:OverlayEngine_0]fence/S+/PL0/e1/id687/720x1440(0,0)(0,0)/RGBX8888/736/mva01300000/t1/s0
+[   72.487836]  (2)[378:OverlayEngine_0]fence/S+/PL1/e1/id314/720x1440(0,0)(0,0)/PRGBA/736/mva01800000/t1/s0
+[   72.487891]  (2)[378:OverlayEngine_0]fence/S+/PL2/e1/id314/720x48(0,0)(0,0)/PRGBA/736/mva00e00000/t1/s0
+[   72.487943]  (2)[378:OverlayEngine_0]fence/S+/PL3/e1/id215/720x96(0,0)(0,1344)/PRGBA/736/mva00a00000/t1/s0
+[   72.487989]  (2)[378:OverlayEngine_0]fence/S+/PL4/e0/id73
+[   72.488019]  (2)[378:OverlayEngine_0]fence/S+/PL5/e0/id0
+[   72.488049]  (2)[378:OverlayEngine_0]fence/S+/PL6/e0/id0
+[   72.488329]  (0)[603:disp_queue_P0][DISP]func|ddp_dsi_config
+[   72.488466]  (0)[603:disp_queue_P0][DISP]func|primary_display_trigger_nolock
+[   72.498029]  (2)[172:present_fence_w]fence/R+/P0/L8/id687
+[   72.498384]  (3)[173:kworker/u8:3]fence/R+/P0/L0/id686/last685/new687/free/idx686
+[   72.498456]  (3)[173:kworker/u8:3]fence/R+/P0/L1/id313/last312/new314/free/idx313
+[   72.498511]  (3)[173:kworker/u8:3]fence/R+/P0/L2/id313/last312/new314/free/idx313
+[   72.498559]  (3)[173:kworker/u8:3]fence/R+/P0/L3/id214/last213/new215/free/idx214
+[   72.539327]  (0)[210:battery_thread][mt6357_get_auxadc_value] ch_idx = 2, channel = 3, bat_cur = 616, reg_val = 0x547, adc_result = 593
+[   72.539601]  (0)[210:battery_thread][fg_bat_temp_int_sw_check] tmp 30 lt 28 ht 30
+[   72.539636]  (0)[210:battery_thread][fg_bat_sw_temp_int_h_handler]
+[   72.541492]  (0)[210:battery_thread][mt6357_get_auxadc_value] ch_idx = 2, channel = 3, bat_cur = 595, reg_val = 0x547, adc_result = 593
+[   72.542045]  (0)[210:battery_thread][fg_bat_temp_int_internal][FG_TEMP_INT] T[30] V[30 28] C[39 19] h[6113 5822]
+[   72.542460]  (0)[210:battery_thread]oz8806_get_battery_voltage,voltage = 4071
+[   72.544358]  (0)[210:battery_thread][mt6357_get_auxadc_value] ch_idx = 2, channel = 3, bat_cur = 634, reg_val = 0x547, adc_result = 593
+[   72.549416]  (2)[210:battery_thread][oz8806]:enter oz8806_battery_update_data
+[   72.549472]  (2)[210:battery_thread]oz8806_battery_func: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[   72.549504]  (2)[210:battery_thread][oz8806]:g_is_charger_on=1, g_charger_type=1
+[   72.549504] 
+[   72.549541]  (2)[210:battery_thread][oz8806]:adapter_status:1
+[   72.551480]  (2)[210:battery_thread]-----------------------bmu_polling_loop start------------------
+[   72.552386]  (2)[210:battery_thread]CAR is 2278, 0
+[   72.552437]  (2)[210:battery_thread]first sCaMAH:2279,fRC:2278,fRCPrev:2278,fcurr:50,volt:8142
+[   72.552473]  (2)[210:battery_thread]chg capacity: 0
+[   72.552500]  (2)[210:battery_thread]second sCaMAH:2279,fRC:2278,fRCPrev:2278,fcurr:50,volt:8142
+[   72.552815]  (2)[210:battery_thread] sn number = VB3920C924272,year=20,month=C9,sn_new = 0
+[   72.552896]  (2)[210:battery_thread][oz8806_get_battery_id_voltage_internal = 893188
+[   72.552926]  (2)[210:battery_thread] battery_mode is 3,sn_new_flag is :0
+[   72.552955]  (2)[210:battery_thread]----------------------------------------------------
+[   72.552955] VERSION: 2016.08.24/7.00.04
+[   72.552955] TABLEVERSION: V00.AF.00-2022.12.6-ZAP15222-2
+[   72.552955] battery_ok: 1,time_x: 1782964173
+[   72.552955] chg_fcc_update: 0, disg_fcc_update: 0
+[   72.552955] fVolt: 8142   fCurr: 50   fCellTemp: 30   fRSOC: 99
+[   72.552955] sCaMAH: 2279, sCtMAH1: 2278, sCtMAH2: 22
+[   72.552955] fcc: 2300, fRC: 2278
+[   72.552955] i2c_error_times: 0
+[   72.552955] charge_end: 0, discharge_end: 0
+[   72.552955] adapter_status: 1
+[   72.552955] ----------------------------------------------------
+[   72.553602]  (2)[210:battery_thread]test data is 2279
+[   72.553645]  (2)[210:battery_thread]-----------------------bmu_polling_loop end--------------------
+[   72.558258]  (0)[428:fuelgauged]do_ptim_internal : bat 38759 cur 411
+[   72.560568]  (3)[210:battery_thread]oz8806_update_batt_info fRSOC=99,fVolt=4071,fCurr=50,sCaMAH=2279,fCellTemp=30
+[   72.560592]  (3)[210:battery_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   72.560592] 
+[   72.560651]  (3)[210:battery_thread]check_charger_full,g_battery_full = 0
+[   72.560681]  (3)[210:battery_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8142,sunmi_constant_voltage is :8438000
+[   72.560681] 
+[   72.560723]  (3)[210:battery_thread][get_batt_charge_method]:3
+[   72.560750]  (3)[210:battery_thread][get_batt_charge_method]:3
+[   72.560776]  (3)[210:battery_thread][oz8806]:charge_end_fun, time_accumulation:0, charger_finish:0
+[   72.560807]  (3)[210:battery_thread][oz8806]:voltage:4071, cv:4219, fcurr:50, 8806 eoc:100, gas_gauge_ptr->charge_end:0
+[   72.560843]  (3)[210:battery_thread][oz8806]:l=99 v=4071 t=30 c=50 ch=1
+[   72.560875]  (3)[210:battery_thread][oz8806]:since last batt update = 1530 ms
+[   72.564332]  (3)[210:battery_thread]oz8806_get_battery_voltage,voltage = 4071
+[   72.564699] -(3)[210:battery_thread]mtk_rtc_hal_common: rtc_spare_reg[0] = {5aa, 255, 8}
+[   72.564845]  (3)[210:battery_thread]SOC:99,Ibat:50,Vbat:8142 Tbat:30
+[   72.567075]  (3)[210:battery_thread][read_boot_battery_plug_out_status] rtc_invalid 1 plugout 0 bat_plug_out_time 31 sp3:0x64 pl:1 0
+[   72.568132]  (0)[321:healthd]healthd: Unknown battery status '3'
+[   72.569788]  (0)[321:healthd]healthd: battery l=99 v=8142 t=30.0 h=2 st=2 c=0 chg=u
+[   72.570139]  (0)[321:healthd]healthd: send_already = 0
+[   72.579132]  (0)[210:battery_thread][oz8806]:enter oz8806_battery_update_data
+[   72.579194]  (0)[210:battery_thread]oz8806_battery_func: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[   72.579226]  (0)[210:battery_thread][oz8806]:g_is_charger_on=1, g_charger_type=1
+[   72.579226] 
+[   72.579262]  (0)[210:battery_thread][oz8806]:adapter_status:1
+[   72.581480]  (2)[210:battery_thread]-----------------------bmu_polling_loop start------------------
+[   72.591384]  (2)[210:battery_thread]CAR is 2278, 0
+[   72.591441]  (2)[210:battery_thread]first sCaMAH:2279,fRC:2278,fRCPrev:2278,fcurr:50,volt:8142
+[   72.591479]  (2)[210:battery_thread]chg capacity: 0
+[   72.591506]  (2)[210:battery_thread]second sCaMAH:2279,fRC:2278,fRCPrev:2278,fcurr:50,volt:8142
+[   72.591815]  (2)[210:battery_thread] sn number = VB3920C924272,year=20,month=C9,sn_new = 0
+[   72.591901]  (2)[210:battery_thread][oz8806_get_battery_id_voltage_internal = 892822
+[   72.591930]  (2)[210:battery_thread] battery_mode is 3,sn_new_flag is :0
+[   72.591959]  (2)[210:battery_thread]----------------------------------------------------
+[   72.591959] VERSION: 2016.08.24/7.00.04
+[   72.591959] TABLEVERSION: V00.AF.00-2022.12.6-ZAP15222-2
+[   72.591959] battery_ok: 1,time_x: 1782964173
+[   72.591959] chg_fcc_update: 0, disg_fcc_update: 0
+[   72.591959] fVolt: 8142   fCurr: 50   fCellTemp: 30   fRSOC: 99
+[   72.591959] sCaMAH: 2279, sCtMAH1: 2278, sCtMAH2: 22
+[   72.591959] fcc: 2300, fRC: 2278
+[   72.591959] i2c_error_times: 0
+[   72.591959] charge_end: 0, discharge_end: 0
+[   72.591959] adapter_status: 1
+[   72.591959] ----------------------------------------------------
+[   72.594242]  (0)[210:battery_thread]test data is 2279
+[   72.594297]  (0)[210:battery_thread]-----------------------bmu_polling_loop end--------------------
+[   72.596818]  (2)[210:battery_thread]oz8806_update_batt_info fRSOC=99,fVolt=4071,fCurr=50,sCaMAH=2279,fCellTemp=30
+[   72.596842]  (2)[210:battery_thread][oz8806]:sunmi_constant_voltage = 8438000 config_data.charge_cv_voltage = 4219
+[   72.596842] 
+[   72.596902]  (2)[210:battery_thread]check_charger_full,g_battery_full = 0
+[   72.596932]  (2)[210:battery_thread][oz8806]:lisa-00 check_charger_full: ret = 0,voltage is :8142,sunmi_constant_voltage is :8438000
+[   72.596932] 
+[   72.596974]  (2)[210:battery_thread][get_batt_charge_method]:3
+[   72.597001]  (2)[210:battery_thread][get_batt_charge_method]:3
+[   72.597027]  (2)[210:battery_thread][oz8806]:charge_end_fun, time_accumulation:0, charger_finish:0
+[   72.597058]  (2)[210:battery_thread][oz8806]:voltage:4071, cv:4219, fcurr:50, 8806 eoc:100, gas_gauge_ptr->charge_end:0
+[   72.597144]  (2)[210:battery_thread][oz8806]:l=99 v=4071 t=30 c=50 ch=1
+[   72.597183]  (2)[210:battery_thread][oz8806]:since last batt update = 30 ms
+[   72.597642]  (1)[428:fuelgauged]oz8806_get_battery_voltage,voltage = 4071
+[   72.600433]  (2)[210:battery_thread]oz8806_get_battery_voltage,voltage = 4071
+[   72.600800] -(2)[210:battery_thread]mtk_rtc_hal_common: rtc_spare_reg[0] = {5aa, 255, 8}
+[   72.600926]  (2)[210:battery_thread]SOC:99,Ibat:50,Vbat:8142 Tbat:30
+[   72.600960]  (2)[210:battery_thread]car[-41,111,-127,162042,-76] c:1 439 vbat:3876 vbus:4901 soc:99 99 gm3:0 0 0 0
+[   72.601020]  (2)[210:battery_thread]tmp:30 65535 65535 hcar2:162050 lcar2:68 time:72 sw_iavg:-2108 0 0 nafg_m:6 0 0
+[   72.602901]  (2)[428:fuelgauged]MTK_FG: [FGADC_info] tmp:30 rdnafg:0 vc:0 disable_fg:0:0 fg_v:4256:5744:39236:0:23984:4256:5744:5744
+[   72.603270]  (2)[428:fuelgauged]MTK_FG: [FGADC_intr_end][FG_INTR_BAT_TEMP_HT]soc:5744 fg_c_soc:6183 fg_v_soc:5744 ui_soc:9997 vc_diff:439 vc_mode 0 VBAT 40710 T:[30 V 30 C 29] D0_C 6186 D0_V 5744 CAR_V 0 Q:[23984 23984] aging 10000 bat_cycle 0 Trk[0(0):0:0] UI[0:0] Chr[1:0:0] pseudo1 1  DC_ratio 100
+[   72.603520] -(2)[428:fuelgauged]mtk_rtc_hal_common: rtc_spare_reg[0] = {5aa, 255, 8}
+[   72.603567] -(2)[428:fuelgauged]mtk_rtc_hal_common: rtc_spare_reg[0] = {5aa, 255, 8}
+[   72.604041]  (2)[428:fuelgauged]oz8806_get_battery_voltage,voltage = 4071
+[   72.604675]  (1)[428:fuelgauged]oz8806_get_battery_voltage,voltage = 4071
+[   72.604727]  (1)[428:fuelgauged]get_shutdown_cond ret:0 0 0 0 vbat:4071
+[   72.605440]  (1)[428:fuelgauged]MTK_FG: get_kernel_cmd:0 0
+[   72.608055]  (0)[332:surfaceflinger][DISP]HRT hrt_num:2/fps:60/dal:0/p:1/r:NA/layer_tb:0/bound_tb:0
+[   72.608114]  (0)[332:surfaceflinger][DISP]HRT D0/M1/LN4/hrt_num:2/G(-1,-1)
+[   72.608146]  (0)[332:surfaceflinger][DISP]L0->0/of(0,0)/swh(0,0)/dwh(720,1440)/fmt:0xb04/ext:-1
+[   72.608181]  (0)[332:surfaceflinger][DISP]L1->1/of(0,0)/swh(0,0)/dwh(720,1440)/fmt:0x604/ext:-1
+[   72.608216]  (0)[332:surfaceflinger][DISP]L2->2/of(0,0)/swh(0,0)/dwh(720,48)/fmt:0x604/ext:-1
+[   72.608251]  (0)[332:surfaceflinger][DISP]L3->3/of(0,1344)/swh(0,0)/dwh(720,96)/fmt:0x604/ext:2
+[   72.608297]  (0)[332:surfaceflinger][DISP]HRT D1/M0/LN0/hrt_num:2/G(-1,-1)
+[   72.609339]  (2)[210:battery_thread][read_nafg_vbat] i:0 nag_vbat_reg 0xdbe3 nag_vbat_mv 38764:23523 3876
+[   72.609436]  (2)[210:battery_thread][read_nafg_vbat1] 0 1 10 0 0 1 23808 4766 0
+[   72.609520]  (2)[210:battery_thread][read_nafg_vbat2] 1 0 0 1 1 0 1 0 0 1 0 0
+[   72.610451]  (0)[332:surfaceflinger]fence/P+/P0/L8/id688/fd92
+[   72.610664]  (0)[332:surfaceflinger]fence/P+/P0/L0/id688/fd106/mva0x01300000/size0x0040b000
+[   72.610778]  (0)[332:surfaceflinger]fence/P+/P0/L1/id315/fd106/mva0x01800000/size0x0040b000
+[   72.610871]  (0)[332:surfaceflinger]fence/P+/P0/L2/id315/fd106/mva0x00400000/size0x00023000
+[   72.610953]  (0)[332:surfaceflinger]fence/P+/P0/L3/id216/fd106/mva0x00a00000/size0x00045000
+[   72.612386]  (1)[378:OverlayEngine_0]fence/S+/PL0/e1/id688/720x1440(0,0)(0,0)/RGBX8888/736/mva01300000/t1/s0
+[   72.612453]  (1)[378:OverlayEngine_0]fence/S+/PL1/e1/id315/720x1440(0,0)(0,0)/PRGBA/736/mva01800000/t1/s0
+[   72.612493]  (1)[378:OverlayEngine_0]fence/S+/PL2/e1/id315/720x48(0,0)(0,0)/PRGBA/736/mva00400000/t1/s0
+[   72.612531]  (1)[378:OverlayEngine_0]fence/S+/PL3/e1/id216/720x96(0,0)(0,1344)/PRGBA/736/mva00a00000/t1/s0
+[   72.612564]  (1)[378:OverlayEngine_0]fence/S+/PL4/e0/id73
+[   72.612586]  (1)[378:OverlayEngine_0]fence/S+/PL5/e0/id0
+[   72.612608]  (1)[378:OverlayEngine_0]fence/S+/PL6/e0/id0
+[   72.612849]  (3)[603:disp_queue_P0][DISP]func|ddp_dsi_config
+[   72.612961]  (3)[603:disp_queue_P0][DISP]func|primary_display_trigger_nolock
+[   72.628988]  (1)[172:present_fence_w]fence/R+/P0/L8/id688
+[   72.629029]  (0)[861:kworker/u8:7]fence/R+/P0/L0/id687/last686/new688/free/idx687
+[   72.629092]  (0)[861:kworker/u8:7]fence/R+/P0/L1/id314/last313/new315/free/idx314
+[   72.629136]  (0)[861:kworker/u8:7]fence/R+/P0/L2/id314/last313/new315/free/idx314
+[   72.629172]  (0)[861:kworker/u8:7]fence/R+/P0/L3/id215/last214/new216/free/idx215
+[   72.639977]  (2)[332:surfaceflinger][DISP]HRT hrt_num:2/fps:60/dal:0/p:1/r:NA/layer_tb:0/bound_tb:0
+[   72.640025]  (2)[332:surfaceflinger][DISP]HRT D0/M1/LN4/hrt_num:2/G(-1,-1)
+[   72.640051]  (2)[332:surfaceflinger][DISP]L0->0/of(0,0)/swh(0,0)/dwh(720,1440)/fmt:0xb04/ext:-1
+[   72.640081]  (2)[332:surfaceflinger][DISP]L1->1/of(0,0)/swh(0,0)/dwh(720,1440)/fmt:0x604/ext:-1
+[   72.640109]  (2)[332:surfaceflinger][DISP]L2->2/of(0,0)/swh(0,0)/dwh(720,48)/fmt:0x604/ext:-1
+[   72.640137]  (2)[332:surfaceflinger][DISP]L3->3/of(0,1344)/swh(0,0)/dwh(720,96)/fmt:0x604/ext:2
+[   72.640166]  (2)[332:surfaceflinger][DISP]HRT D1/M0/LN0/hrt_num:2/G(-1,-1)
+[   72.641989]  (2)[332:surfaceflinger]fence/P+/P0/L8/id689/fd89
+[   72.642179]  (2)[332:surfaceflinger]fence/P+/P0/L0/id689/fd98/mva0x01300000/size0x0040b000
+[   72.642271]  (2)[332:surfaceflinger]fence/P+/P0/L1/id316/fd98/mva0x01800000/size0x0040b000
+[   72.642360]  (2)[332:surfaceflinger]fence/P+/P0/L2/id316/fd98/mva0x00b00000/size0x00023000
+[   72.642442]  (2)[332:surfaceflinger]fence/P+/P0/L3/id217/fd98/mva0x00a00000/size0x00045000
+[   72.644709]  (0)[378:OverlayEngine_0]fence/S+/PL0/e1/id689/720x1440(0,0)(0,0)/RGBX8888/736/mva01300000/t1/s0
+[   72.644824]  (0)[378:OverlayEngine_0]fence/S+/PL1/e1/id316/720x1440(0,0)(0,0)/PRGBA/736/mva01800000/t1/s0
+[   72.644878]  (0)[378:OverlayEngine_0]fence/S+/PL2/e1/id316/720x48(0,0)(0,0)/PRGBA/736/mva00b00000/t1/s0
+[   72.645251]  (0)[378:OverlayEngine_0]fence/S+/PL3/e1/id217/720x96(0,0)(0,1344)/PRGBA/736/mva00a00000/t1/s0
+[   72.645314]  (0)[378:OverlayEngine_0]fence/S+/PL4/e0/id73
+[   72.645345]  (0)[378:OverlayEngine_0]fence/S+/PL5/e0/id0
+[   72.645375]  (0)[378:OverlayEngine_0]fence/S+/PL6/e0/id0
+[   72.645619]  (2)[603:disp_queue_P0][DISP]func|ddp_dsi_config
+[   72.645781]  (2)[603:disp_queue_P0][DISP]func|primary_display_trigger_nolock
+[   72.661753]  (0)[172:present_fence_w]fence/R+/P0/L8/id689
+[   72.661849]  (2)[173:kworker/u8:3]fence/R+/P0/L0/id688/last687/new689/free/idx688
+[   72.661894]  (2)[173:kworker/u8:3]fence/R+/P0/L1/id315/last314/new316/free/idx315
+[   72.661934]  (2)[173:kworker/u8:3]fence/R+/P0/L2/id315/last314/new316/free/idx315
+[   72.661970]  (2)[173:kworker/u8:3]fence/R+/P0/L3/id216/last215/new217/free/idx216
+[   72.805382]  (2)[165:disp_idlemgr][DISP][disp_lowpower]primary enter idle state
+[   72.805434]  (2)[165:disp_idlemgr][DISP][disp_lowpower]_vdo_mode_enter_idle
+[   72.805465]  (2)[165:disp_idlemgr][DISP]primary display will switch from DIRECT_LINK to DECOUPLE
+[   72.805939]  (2)[165:disp_idlemgr][DISP]func|ddp_dsi_config
+[   72.810121]  (2)[165:disp_idlemgr][DISP]dl_to_dc capture:Flush wait wdma sof
+[   72.810250]  (2)[165:disp_idlemgr][DDP/ddp_manager]modify handle cf8d5000 from primary_all to primary_rdma0_color0_disp
+[   72.810933]  (2)[165:disp_idlemgr][DISP]func|ddp_dsi_config
+[   72.825931]  (0)[165:disp_idlemgr][DDP/OVL]warn:ovl_roi:(720x1440)
+[   72.826037]  (0)[165:disp_idlemgr][DDP/ddp_manager]path start on scenario primary_ovl_memout
+[   72.826214]  (0)[165:disp_idlemgr][DISP]primary display is DECOUPLE mode now
+[   72.996282]  (0)[54:kworker/0:1][g_android]usb_state<CONFIGURED>
+[   73.147259]  (2)[332:surfaceflinger][DISP][disp_lowpower]_vdo_mode_leave_idle
+[   73.148330]  (2)[332:surfaceflinger][DISP]primary display will switch from DECOUPLE to DIRECT_LINK

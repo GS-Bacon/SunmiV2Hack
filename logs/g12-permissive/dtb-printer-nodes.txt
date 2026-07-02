@@ -1,0 +1,5 @@
+/sys/firmware/devicetree/base/spi2@11010000
+/sys/firmware/devicetree/base/spi3@11012000
+/sys/firmware/devicetree/base/gpio_printer
+/sys/firmware/devicetree/base/spi@1100a000/spi_printer@0
+/sys/firmware/devicetree/base/spi4@11013000
