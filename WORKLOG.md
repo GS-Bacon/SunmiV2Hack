@@ -10,6 +10,98 @@
 
 ---
 
+## 2026-07-02 12:00 (main) — G-10 Phase 3: Track G v2 LK でも Magisk-patched boot は通らず、切り分け実験が次の焦点
+
+### 変更概要
+
+Phase 1 の成功(Track G v2 LK で stock boot Android 通常起動)を踏まえ、Phase 3 で **Magisk-patched boot.img (G-7 で bootloop の元凶) を焼いて起動確認**した。結果は **B: bootloop 継続**、LK v2 でも Magisk-patched boot は通らない。純正 boot 書き戻しで Android 復旧を確認、当日の作業はここで区切り。次セッションは「切り分け実験」で原因を絞る所から。
+
+### Phase 3 の実測
+
+- `dump/new-boot-magisk.img` (SHA256 `60712117...`, 24MB) を boot partition (sector 734464) に焼き
+- reset → USB 抜き → 電源 ON → **Sunmi ロゴ点滅 → 再起動 loop**(G-7 と同じ症状)
+- rollback: `dump/boot.img` (stock, `e15e02e5...`) を同じ手順で焼き戻し
+- 電源 ON で通常起動確認、LK v2 は残置(patched のまま)
+
+### ★ 判明した Fact Matrix(Track G v2 の効果範囲)
+
+| 項目 | 実測結果 |
+|---|---|
+| Track G v2 LK は preloader の LK verify を通る | ✅ (Phase 1)|
+| Track G v2 LK は stock boot.img を起動できる | ✅ (Phase 1 + Phase 3 の rollback で 2 回確認)|
+| Track G v2 LK は Magisk-patched boot.img を起動できる | ❌ (Phase 3)|
+| 上記から言える事: LK 内には Track G v2 で touch していない boot verify が残る | 高確度 |
+
+つまり **Track G v2 だけでは「任意の boot.img を通す LK」にはなっていない**。追加の RE と patch が必要。
+
+### 原因の 4 候補(次セッション以降で切り分け)
+
+| # | 仮説 | 切り分け実験 |
+|---|---|---|
+| 1 | AVB1 boot header signature verify が Track G v2 で touch していない別 function にある | LK Ghidra で `avb`, `boot_hdr`, `SHA1`, `verify_image` grep、追加 function 探索 |
+| 2 | Sunmi 独自の追加 verify path が LK 内にある | 同上 + boot.img header の magic bytes / SHA1 hash 参照箇所 grep |
+| 3 | Magisk の boot_patch.sh が Sunmi boot.img と非互換で壊れている(WORKLOG line 1262: dtbs パッチ 3 回失敗の記録)| stock boot.img を **1 バイトだけ改変**(例:末尾 padding の 0x00 → 0x01)して焼く。通れば "Magisk の壊れが原因"、通らなければ "LK 側 verify が原因" |
+| 4 | dm-verity で kernel が /system reject | boot 通れば /system mount の前後で切り分け可能。今の段階では検証できない |
+
+**優先度**:先に (3) を切り分ける = 1 バイト改変 boot が通るなら (1)(2) は無視でよく Magisk 修正で済む、通らないなら (1)(2) の LK RE に集中。
+
+### 次のTODO(次セッションで最初にやる作業、優先順)
+
+1. **1 バイト改変 boot.img で切り分け実験**(brick リスク低、Phase 3 と同じ復旧手順で戻せる)
+   - `dd if=dump/boot.img of=scratch/boot-1byte-mod.img bs=1 conv=notrunc`
+   - 末尾または signature 領域外の padding を 1 バイトだけ変更
+   - 焼いて起動確認
+   - **通る = Magisk のパッチが壊れ**、Magisk 別バージョン / 手動 initramfs 差し替え検討
+   - **通らない = LK 内に追加 verify**、以下 2 の LK RE に進む
+2. **LK Ghidra で追加 boot verify path 探索**(brick リスクなし)
+   - keywords: `boot_hdr`, `boot_magic` ("ANDROID!"), `verify_boot`, `SHA1`, `avb`, `hash_check`
+   - 既存 Ghidra project `scratch/g8-lk-recon/` を再利用
+   - Track G v2 で touch した `FUN_5601a7e0` / `FUN_5601a7ec` (SEC_POLICY wrapper) 以外の boot 関連 xref を追う
+3. **AVB1 の実装位置調査**(公式ドキュメント)
+   - MediaTek MT6739 の AVB1 実装位置(LK か kernel か)
+   - Android 7.1 世代の AVB1 header layout 確認
+   - vbmeta partition が Sunmi V2 に存在するか(`sudo mtk r vbmeta ...` で dump 試行)
+4. 上記結果を踏まえて **Track H(仮)patch 設計**、G-8 と同じ RE ワークフローで
+5. Android アップグレード(GSI / LineageOS)は Track H 完成後に着手
+
+### mtkclient BROM 進入手順(次回すぐ再現できるように再掲)
+
+Sunmi V2 が **正常起動できる状態から** BROM に落とす手順:
+
+```bash
+# 1. 端末 shutdown (Android 上で電源 OFF)
+# 2. USB 抜き
+# 3. 以下を先に起動して待機:
+sudo PYTHONPATH=/home/bacon/.local/lib/python3.14/site-packages python3 \
+    tools/mtkclient/mtk.py w <partition> <img> \
+    --preloader dump/preloader-boot0.img
+# 4. Vol- (音量下) を押しながら USB 挿し、そのままキープ
+# 5. mtkclient が BROM 検知 → DA stage 1/2 upload → 書き込み
+# 6. 完了後:
+sudo PYTHONPATH=... python3 tools/mtkclient/mtk.py reset --preloader dump/preloader-boot0.img
+# 7. USB 抜き、電源 ON で起動試験
+```
+
+**重要**:
+- `--preloader dump/preloader-boot0.img` を必ず明示(BROM は DRAM 初期化しない、stage 2 が起動しない)
+- Vol- を USB 挿し中も 3 秒以上キープ(BROM 進入の handshake window 確保)
+- BROM は 1 セッションで完結、mtkclient を途中で kill すると post-connected state になり再進入不可、物理リセット必要
+
+### 主な変更ファイル
+
+- 新規: `logs/experiment-g8-phase3-w-magisk-boot.log` — Magisk-patched boot 焼きログ(24MB 100% 書き込み成功、しかし起動 bootloop)
+- 新規: `logs/experiment-g8-phase3-rollback-boot.log` — stock boot 復旧ログ
+- 更新: `WORKLOG.md`(本エントリ)
+
+### 教訓・学び
+
+- **Track G v2 で「LK auth の全部」は skip できていない**。preloader → LK 経路の LK signature verify は skip 済だが、LK → kernel 経路(boot.img header verify)がまだ働いている
+- **「任意 boot 通す」は 2 段階の verify skip が必要**:preloader → LK(Track F+G で完了)+ LK → kernel(Track H で必要、未着手)
+- **切り分け実験は「最小変更」から**:Magisk full patch は複雑度が高すぎて原因特定できない。1 バイト改変 boot で「LK verify vs Magisk 壊れ」を先に確定するのが正解
+- **eMMC の rollback は G-9/G-10 で 3 回実証済**、Magisk boot 焼きの brick リスクは事実上ゼロ、次の実験に踏み込める
+
+---
+
 ## 2026-07-02 11:00 (main) — G-10 Phase 1: Track G v2 LK 焼き成功、Android 通常起動を実測
 
 ### 変更概要

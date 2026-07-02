@@ -1,0 +1,104 @@
+fuse library not installed
+Preloader - Status: Waiting for PreLoader VCOM, please reconnect mobile/iot device to brom mode
+
+Port - Hint:
+
+Power off the phone before connecting.
+For brom mode, press and hold vol up, vol dwn, or all hw buttons and connect usb.
+For preloader mode, don't press any hw button and connect usb.
+If it is already connected and on, hold power for 10 seconds to reset.
+
+
+...........
+
+Port - Hint:
+
+Power off the phone before connecting.
+For brom mode, press and hold vol up, vol dwn, or all hw buttons and connect usb.
+For preloader mode, don't press any hw button and connect usb.
+If it is already connected and on, hold power for 10 seconds to reset.
+
+
+...........
+
+Port - Hint:
+
+Power off the phone before connecting.
+For brom mode, press and hold vol up, vol dwn, or all hw buttons and connect usb.
+For preloader mode, don't press any hw button and connect usb.
+If it is already connected and on, hold power for 10 seconds to reset.
+
+
+.......Port - Device detected :)
+Preloader - Detected regular mode !
+Preloader - 	CPU:			MT6739/MT6731/MT8765()
+Preloader - 	HW version:		0x0
+Preloader - 	WDT:			0x10007000
+Preloader - 	Uart:			0x11002000
+Preloader - 	Brom payload addr:	0x100a00
+Preloader - 	DA payload addr:	0x201000
+Preloader - 	CQ_DMA addr:		0x10212000
+Preloader - 	Var1:			0xb4
+Preloader - Disabling Watchdog...
+Preloader - HW code:			0x699
+Preloader - Target config:		0x0
+Preloader - 	SBC enabled:		False
+Preloader - 	SLA enabled:		False
+Preloader - 	DAA enabled:		False
+Preloader - 	SWJTAG enabled:		False
+Preloader - 	EPP_PARAM at 0x600 after EMMC_BOOT/SDMMC_BOOT:	False
+Preloader - 	Root cert required:	False
+Preloader - 	Mem read auth:		False
+Preloader - 	Mem write auth:		False
+Preloader - 	Cmd 0xC8 blocked:	False
+Preloader - Get Target info
+Preloader - BROM mode detected.
+Preloader - 	HW subcode:		0x8a00
+Preloader - 	HW Ver:			0xcb00
+Preloader - 	SW Ver:			0x2
+Preloader - ME_ID:			EB79B3412F1BE21994A3F328DEB56D6F
+Preloader - SOC_ID:			D95E9CB40569526223214C4BDF1AA085E592DCC732156D866E7EBE442E1A9B2B
+DaHandler - Device is unprotected.
+DaHandler - Device is in BROM-Mode. Bypassing security.
+DaHandler - Unprotected device, we assume we can patch directly !
+DAXFlash - Uploading xflash stage 1 from MTK_DA_V5.bin
+XFlashExt - Patching da1 ...
+Mtk - Patched "Patched loader msg" in preloader
+Mtk - Patched "hash_check" in preloader
+Mtk - Patched "Patched loader msg" in preloader
+Mtk - Patched "get_vfy_policy" in preloader
+XFlashExt - Patching da2 ...
+XFlashExt - Security check patched
+XFlashExt - DA version anti-rollback patched
+XFlashExt - SBC patched to be disabled
+XFlashExt - Register read/write not allowed patched
+DAXFlash - Successfully uploaded stage 1, jumping ..
+Preloader - Jumping to 0x200000
+Preloader - Jumping to 0x200000: ok.
+DAXFlash - Successfully received DA sync
+DAXFlash - Sending emi data ...
+DAXFlash - DRAM setup passed.
+DAXFlash - Sending emi data succeeded.
+DAXFlash - Uploading stage 2...
+DAXFlash - Upload data was accepted. Jumping to stage 2...
+DAXFlash - Boot to succeeded.
+DAXFlash - Successfully uploaded stage 2
+DAXFlash - DA SLA is disabled
+DAXFlash - EMMC FWVer:      0x0
+DAXFlash - EMMC ID:         EH8EE8
+DAXFlash - EMMC CID:        700100454838454538012e53ec37b7a3
+DAXFlash - EMMC Boot1 Size: 0x400000
+DAXFlash - EMMC Boot2 Size: 0x400000
+DAXFlash - EMMC GP1 Size:   0x0
+DAXFlash - EMMC GP2 Size:   0x0
+DAXFlash - EMMC GP3 Size:   0x0
+DAXFlash - EMMC GP4 Size:   0x0
+DAXFlash - EMMC RPMB Size:  0x400000
+DAXFlash - EMMC USER Size:  0x1c8000000
+DAXFlash - Starting DA extensions ...
+DAXFlash - Extensions were accepted. Jumping to extensions...
+DAXFlash - Boot to succeeded.
+DAXFlash - DA Extensions successfully added at 0x4fff0000
+Main - Handling da commands ...
+Done |█---------| 8.3% Write: (0x200000/0x1800000),0.00 MB/sProgress: |██--------| 16.7% Write: (0x400000/0x1800000), 3.43 MB/s 05s left Progress: |██--------| 25.0% Write: (0x600000/0x1800000), 1.47 MB/s 07s left Progress: |███-------| 33.3% Write: (0x800000/0x1800000), 1.55 MB/s 07s left Progress: |████------| 41.7% Write: (0xA00000/0x1800000), 1.6 MB/s 07s left Progress: |█████-----| 50.0% Write: (0xC00000/0x1800000), 1.99 MB/s 06s left Progress: |██████----| 58.3% Write: (0xE00000/0x1800000), 1.71 MB/s 05s left Progress: |███████---| 66.7% Write: (0x1000000/0x1800000), 1.63 MB/s 04s left Progress: |████████--| 75.0% Write: (0x1200000/0x1800000), 1.84 MB/s 03s left Progress: |████████--| 83.3% Write: (0x1400000/0x1800000), 1.83 MB/s 02s left Progress: |█████████-| 91.7% Write: (0x1600000/0x1800000), 1.71 MB/s 01s left Progress: |██████████| 100.0% Write: (0x1800000/0x1800000), 1.68 MB/s  
+Wrote dump/new-boot-magisk.img to sector 734464 with sector count 49152.
