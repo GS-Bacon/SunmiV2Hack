@@ -27,10 +27,25 @@ arch/arm/boot/dts/
 **外部 fetch 必要**(kernel tree に含める、`drivers/power/oz8806/` に配置):
 
 - `Vgdn1942/android_kernel_mt6755_3.18.119` の `drivers/misc/mediatek/power/mt6755/o2micro_battery/`:
-  - `oz8806_battery.c`(要 `mach/` → `mt-plat/` include 修正)
-  - `oz8806_regdef.h`、`battery_config.h`
+  - `oz8806_battery.c` → **`mt6755-to-mt6739-api-port.patch` を apply** (kernel 3.18→4.4 の API drift 対応、6 hunk)
+  - `oz8806_regdef.h`
   - `parameter.c/h`
   - `table.c/h`
+- `battery_config.h` は本 dir の版(Sunmi shim 用 extern 追加済)を使う
+
+## kernel 3.18→4.4 API port(`mt6755-to-mt6739-api-port.patch`)
+
+MT6755 upstream(kernel 3.18)から本 tree(kernel 4.4)への差分 6 箇所:
+
+| Line | 変更 | 理由 |
+|---|---|---|
+| L52-54 | `<mach/battery_common.h>` `<mach/mtk_rtc.h>` → `<mt-plat/xxx.h>` | MT6739 tree では `mach/` に該当なし、`mt-plat/` 経由 |
+| L524 | `oz8806_create_sys(battery_psy->dev, ...)` → `&battery_psy->dev` | kernel 4.4 で `struct power_supply.dev` が pointer から embedded struct に |
+| L1048 | `battery_psy->get_property(...)` → `power_supply_get_property(...)` | kernel 4.4 で `get_property` が `power_supply_desc` に移動、wrapper 経由が正 |
+| L1222 | `kal_int32` → `int32_t` | MTK KAL 型が MT6739 tree に無い |
+| L1646, L1676 | `battery_psy->dev->kobj` → `battery_psy->dev.kobj` | 同 L524 の embedded struct 化 |
+
+追加で `wake_up_bat_bmu()` の stub を `sunmi_oz8806_compat.c` に、`extern void wake_up_bat_bmu(void);` を `battery_config.h` に追加(MTK charger interop、Sunmi V2 では periodic battery_work で代替)。
 
 ## 適用手順
 
@@ -70,15 +85,16 @@ EOF
 
 ## 検証(bacondata で確認済)
 
-以下 5 ファイルの clean compile(1 warning 以下、error 0):
+以下 **6 ファイル全部** の clean compile(error 0、warning 数個以下):
 
 - `drivers/misc/spi_printer.o`(158 KB)
 - `drivers/misc/odm_printer_gpio.o`(144 KB)
-- `drivers/power/oz8806/sunmi_oz8806_compat.o`(34 KB)
+- `drivers/power/oz8806/sunmi_oz8806_compat.o`(35 KB、wake_up_bat_bmu stub 追加後)
 - `drivers/power/oz8806/parameter.o`(132 KB)
 - `drivers/power/oz8806/table.o`(16 KB)
+- `drivers/power/oz8806/oz8806_battery.o`(**216 KB、`mt6755-to-mt6739-api-port.patch` apply 後**)
 
-`oz8806_battery.o` は `mach/` include cascade 修正で通る(所要 5-10 個の header path 書換え、Phase 1a-3 refinement)。
+**Phase 1a driver work は 100% 完成状態**。zImage 全体 build は kernel proper(`kernel/fork.o`)の kernel-4.4 vs modern toolchain 不整合が別途あり、driver 側とは無関係(`docs/g12-phase1a-build.md` 参照)。
 
 ## driver ↔ 実測 RE 対応表
 

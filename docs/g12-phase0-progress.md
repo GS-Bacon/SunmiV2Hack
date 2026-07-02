@@ -8,7 +8,7 @@ build machine: `bacondata` (SSH `bacon@100.105.139.80`)
 | # | 内容 | 状態 | Doc |
 |---|---|---|---|
 | 0-A | Workspace + build tool 準備 | ✅ 完了 | [g12-phase0-workspace.md](./g12-phase0-workspace.md) |
-| 0-B | LineageOS 17.1 tree | 🚫 本 plan 範囲外(Phase 3 直前で実施、ディスク要 100GB+)| — |
+| 0-B | LineageOS 17.1 tree | 🔄 bacondata でバックグラウンド sync 起動済(2026-07-02 15:23)、shallow / --no-clone-bundle / --no-tags で最小化。完了確認は次セッション | `/home/bacon/sunmiandroid/lineage-17.1/` |
 | 0-C | MT6739 kernel-4.4 base(Iscle BSP)+ baseline defconfig | ✅ tree 準備完了、build 中 | [g12-phase0-kernel-baseline.md](./g12-phase0-kernel-baseline.md) |
 | 0-D | K-touch i9 device tree + mtk_patches clone | ✅ 完了(単独 clone、統合は Phase 3)| [g12-phase0-device-tree.md](./g12-phase0-device-tree.md) |
 | 0-E | oz8806 charger と sunmi_/huaqin_ symbol 洗い出し | ✅ 完了(Ghidra RE 不要、MT6755 upstream 発見)| [g12-phase0-sunmi-patches.md](./g12-phase0-sunmi-patches.md) |
@@ -21,7 +21,7 @@ build machine: `bacondata` (SSH `bacon@100.105.139.80`)
 | 1a-2 | mt6739-sunmi_v2-printer.dtsi 作成 | ✅ 完了(scratch 側)、mt6739.dts への include は Phase 1a-5 統合時 | 同上 |
 | 1a-3 | oz8806 charger driver 組み込み(MT6755 upstream + Sunmi shim)| ✅ 完了(kernel tree に配置済)| [g12-phase0-sunmi-patches.md](./g12-phase0-sunmi-patches.md) |
 | 1a-4 | sunmi_v2_defconfig 更新(printer + oz8806 CONFIG_*)| ✅ 完了 | [g12-phase0-kernel-baseline.md](./g12-phase0-kernel-baseline.md) |
-| 1a-5 | driver 単体 compile(spi_printer / odm_printer_gpio / sunmi_oz8806_compat + parameter/table)| ✅ 完了(5 ファイル clean compile 確認)| [g12-phase1a-build.md](./g12-phase1a-build.md) |
+| 1a-5 | driver 単体 compile(spi_printer / odm_printer_gpio / sunmi_oz8806_compat + parameter/table + **oz8806_battery**)| ✅ 完了(**6 ファイル全部 clean compile**、oz8806_battery.o=216KB 追加)| [g12-phase1a-build.md](./g12-phase1a-build.md) |
 | 1a-5+ | zImage full build | ⚠️ kernel proper(fork.o)が kernel-4.4 vs modern toolchain の compile-time assertion で失敗 — driver 側は健全と別途検証済、次セッションで Linaro 4.9 toolchain 導入 or Phase 2 の Android 10 kernel で clean build を狙う | 同上 |
 
 ## bacondata workspace layout

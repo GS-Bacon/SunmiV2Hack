@@ -10,6 +10,67 @@
 
 ---
 
+## 2026-07-02 15:25 (main) — G-13 追加: Phase 1a-3 100% 完成(oz8806_battery.o clean compile)+ Phase 0-B (LineageOS 17.1 sync) バックグラウンド起動
+
+### 変更概要
+
+初版 G-13 で「driver 5 個 clean compile」まで到達、それに続く延長作業で 2 タスク:
+
+1. **oz8806_battery.c の kernel 3.18 → 4.4 API port**(Phase 1a-3 の refinement):MT6755 upstream driver を MT6739 kernel-4.4 tree で通すため 6 hunk の patch を作成・apply、`oz8806_battery.o` が **216KB で clean compile 成功**。Phase 1a driver work は 100% 完成。
+2. **LineageOS 17.1 tree の repo init + sync を bacondata で nohup バックグラウンド起動**(shallow / --no-clone-bundle / --no-tags)。実測 4.3GB / 20秒 のペースで進行中、100-150GB 想定、SSH 切断後も継続。Phase 3 の下準備。
+
+### oz8806_battery.o に適用した patch(6 hunk)
+
+| Line | 変更 | 理由 |
+|---|---|---|
+| L52-54 | `<mach/battery_common.h>` `<mach/mtk_rtc.h>` → `<mt-plat/xxx.h>` | MT6739 tree に `mach/` header 無し |
+| L524 | `oz8806_create_sys(battery_psy->dev, ...)` → `&battery_psy->dev` | k4.4 で `struct power_supply.dev` が pointer → embedded struct |
+| L1048 | `battery_psy->get_property(...)` → `power_supply_get_property(...)` | k4.4 で `get_property` が `power_supply_desc` に移動、wrapper 経由 |
+| L1222 | `kal_int32` → `int32_t` | MTK KAL 型が MT6739 tree に無い |
+| L1646, L1676 | `battery_psy->dev->kobj` → `battery_psy->dev.kobj` | 同 L524 |
+
+追加 shim:
+- `sunmi_oz8806_compat.c` に `wake_up_bat_bmu()` no-op stub(MTK charger interop、Sunmi V2 では battery_work periodic で代替)
+- `battery_config.h` に `extern void wake_up_bat_bmu(void);`
+- `drivers/power/oz8806/Makefile` に MTK 標準 include path(`drivers/misc/mediatek/include/mt-plat/mt6739/include` 等)を `ccflags-y` で追加 = `<mach/xxx.h>` が MT6739 用に正しく解決
+
+### 主な変更ファイル
+
+- 更新: `patches/g12-drivers/README.md`(oz8806 API port の説明追記、6 ファイル全 clean compile 記録)
+- 新規: `patches/g12-drivers/drivers/power/oz8806/mt6755-to-mt6739-api-port.patch`(6 hunk)
+- 更新: `patches/g12-drivers/drivers/power/oz8806/Makefile`(ccflags で MTK include path 追加)
+- 更新: `patches/g12-drivers/drivers/power/oz8806/sunmi_oz8806_compat.c`(wake_up_bat_bmu stub 追加)
+- 更新: `patches/g12-drivers/drivers/power/oz8806/battery_config.h`(extern 追加)
+- 更新: `docs/g12-phase0-progress.md`(0-B 状態を「sync 稼働中」に、1a-5 に 6 ファイル記載)
+- 更新: `docs/g12-phase1a-build.md`(oz8806_battery.o 完成の記録、API port 詳細)
+- 更新: `WORKLOG.md`(本エントリ)
+
+### 検証(bacondata、arm-linux-gnueabi-gcc 9.5)
+
+Phase 1a driver 6 ファイルの clean compile:
+
+- `spi_printer.o`(159KB)
+- `odm_printer_gpio.o`(144KB)
+- `sunmi_oz8806_compat.o`(~35KB)
+- `parameter.o`(132KB)
+- `table.o`(16KB)
+- `oz8806_battery.o`(**216KB**、new)
+
+### 次のTODO(次セッションで、優先順)
+
+1. `bacondata:/home/bacon/sunmiandroid/lineage-17.1/` の repo sync 完了確認、`.repo/manifest.xml` snapshot
+2. Linaro 4.9 arm-eabi toolchain 導入(kernel-4.4 zImage full build 完成のため)、or Phase 2 (Android 10 kernel-4.9/4.14 = Power535/android_kernel_common_MT6763)へ前倒し
+3. zImage 完成後は Phase 1b(実機焼き)= 別セッション、端末必要
+
+### 教訓・学び
+
+- **API drift は cascade で顕在化**: `mach/` include の header 探索から始まって、struct field 名変更(dev pointer → embedded)、method table 移動(power_supply → power_supply_desc)、型 alias 欠落(kal_int32)、外部関数依存(wake_up_bat_bmu)まで、kernel 3.18 → 4.4 の 6 hunk patch で全部潰せる
+- **MTK 独自 include path は driver 側 Makefile で ccflags-y に足すべき**:`drivers/misc/mediatek/Makefile` の `subdir-ccflags-y += -I.../mt-plat/$(MTK_PLATFORM)/include` は mediatek/ 配下だけ効く。oz8806 のように外に配置する driver は自分の Makefile で明示追加
+- **shallow repo sync は本気で速い + 省 disk**:LineageOS 17.1 で `--depth=1 --no-clone-bundle --no-tags --optimized-fetch` を組み合わせると想定 100-150GB(fetch shallow で history 削減)、稼働中の実測でも 200MB/分ペースで進む
+- **バックグラウンド nohup 起動は `bash -c "..."` の内側で改行を空白化される罠**: script file 化(`nohup /path/to/script.sh &`)にすれば確実
+
+---
+
 ## 2026-07-02 14:40 (main) — G-13 Phase 0/1a: Android 10 移植の Phase 0(端末不要準備)完了 + Phase 1a driver 書き起こし + clean compile 検証
 
 ### 変更概要

@@ -1,0 +1,58 @@
+--- /home/bacon/SunmiV2Hack/scratch/oz8806-mt6755/oz8806_battery.c	2026-07-02 14:18:20.924667118 +0900
++++ /dev/fd/63	2026-07-02 15:20:28.198232639 +0900
+@@ -50,8 +50,8 @@
+ #include <mt-plat/mtk_rtc.h>
+ #include <mt-plat/upmu_common.h>
+ #else
+-#include <mach/battery_common.h>
+-#include <mach/mtk_rtc.h>
++#include <mt-plat/battery_common.h>
++#include <mt-plat/mtk_rtc.h>
+ #endif
+ #endif
+ 
+@@ -521,7 +521,7 @@
+ 	battery_psy = power_supply_get_by_name ("battery");
+ 
+ 	if (battery_psy)
+-		ret = oz8806_create_sys(battery_psy->dev, &battery_psy_attribute_group);
++		ret = oz8806_create_sys(&battery_psy->dev, &battery_psy_attribute_group);
+ 	else
+ 		pr_err("%s: failed to get battery power_supply\n", __func__);
+ 
+@@ -1045,7 +1045,7 @@
+ 		do {
+ 			msleep(50);
+ 			if (battery_psy
+-				&& !battery_psy->get_property (battery_psy, POWER_SUPPLY_PROP_CAPACITY, &val))
++				&& !power_supply_get_property(battery_psy, POWER_SUPPLY_PROP_CAPACITY, &val))
+ 			{
+ 				if (val.intval == data->batt_info.batt_soc)
+ 					capacity_init_ok = 1;
+@@ -1219,7 +1219,7 @@
+ EXPORT_SYMBOL(oz8806_get_remaincap);
+ 
+ #if defined (MTK_MACH_SUPPORT)
+-static kal_int32 rtc_soc = -1;
++static int32_t rtc_soc = -1;
+ #endif
+ 
+ int oz8806_get_soc_from_ext(void)
+@@ -1643,7 +1643,7 @@
+ #endif
+ 
+ 	if (battery_psy && !create_sys)
+-		sysfs_remove_group(&(battery_psy->dev->kobj), &battery_psy_attribute_group);
++		sysfs_remove_group(&(battery_psy->dev.kobj), &battery_psy_attribute_group);
+ 
+ 	sysfs_remove_group(&(data->myclient->dev.kobj), &oz8806_attribute_group);
+ 
+@@ -1673,7 +1673,7 @@
+ #endif
+ 
+ 	if (battery_psy && !create_sys)
+-		sysfs_remove_group(&(battery_psy->dev->kobj), &battery_psy_attribute_group);
++		sysfs_remove_group(&(battery_psy->dev.kobj), &battery_psy_attribute_group);
+ 
+ 	sysfs_remove_group(&(data->myclient->dev.kobj), &oz8806_attribute_group);
+ 

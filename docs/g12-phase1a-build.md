@@ -19,34 +19,47 @@ out-of-tree: `/home/bacon/sunmiandroid/out/kernel-baseline/`
 
 ## Sunmi 独自 driver 単体 compile 検証(★ Phase 1a-1/3 成果の validation)
 
-以下 5 ファイルが **clean compile 済**(1 warning 以下、error なし):
+以下 **6 ファイル全部** が **clean compile 済**(error 0):
 
 | ファイル | .o サイズ | 由来 |
 |---|---|---|
 | `drivers/misc/spi_printer.o` | 158,528 B | Sunmi V2 の printer SPI driver(Phase 1a-1 書き起こし)|
 | `drivers/misc/odm_printer_gpio.o` | 143,900 B | Sunmi V2 の printer GPIO/IRQ driver(Phase 1a-1)|
-| `drivers/power/oz8806/sunmi_oz8806_compat.o` | 33,584 B | Sunmi V2 の oz8806 typo/synonym shim(Phase 1a-3)|
+| `drivers/power/oz8806/sunmi_oz8806_compat.o` | ~34 KB | Sunmi V2 の oz8806 typo/synonym shim + `wake_up_bat_bmu` stub(Phase 1a-3)|
 | `drivers/power/oz8806/parameter.o` | 132,424 B | MT6755 upstream oz8806 の support ファイル |
 | `drivers/power/oz8806/table.o` | 16,404 B | 同上 |
+| `drivers/power/oz8806/oz8806_battery.o` | **215,984 B** | MT6755 upstream + `mt6755-to-mt6739-api-port.patch`(kernel 3.18→4.4 API port、6 hunk)|
 
-意味: **Sunmi 側で新規に書き起こしたコード全部が MT6739 kernel-4.4 tree との統合で clean に通る**。
+意味: **Sunmi 側の driver work は 100% 完成**、Phase 1a 目標達成。
 
-## oz8806_battery.c(未完、cascade patch 系)
+## kernel 3.18 → 4.4 API port(oz8806_battery.c、済)
 
-MT6755 upstream の `oz8806_battery.c` は MT6755 vintage の `mach/` prefix include を使う:
+MT6755 upstream の `oz8806_battery.c`(kernel 3.18)を MT6739 tree(kernel 4.4)で通すため以下 6 hunk を patch(`patches/g12-drivers/drivers/power/oz8806/mt6755-to-mt6739-api-port.patch`):
 
-```c
-#include <mach/battery_common.h>   // MT6755 kernel 3.18 style
-#include <mach/mtk_charging.h>     // 同上
+| Line | 変更 | 理由 |
+|---|---|---|
+| L52-54 | `<mach/battery_common.h>` `<mach/mtk_rtc.h>` → `<mt-plat/xxx.h>` | MT6739 tree では該当 header が `mt-plat/` 直下、`mach/` に無し |
+| L524 | `oz8806_create_sys(battery_psy->dev, ...)` → `&battery_psy->dev` | kernel 4.4 で `struct power_supply.dev` が pointer → embedded struct |
+| L1048 | `battery_psy->get_property(...)` → `power_supply_get_property(...)` | kernel 4.4 で `get_property` が `power_supply_desc` に移動、wrapper 経由 |
+| L1222 | `kal_int32` → `int32_t` | MTK KAL 型が MT6739 tree に無い |
+| L1646, L1676 | `battery_psy->dev->kobj` → `battery_psy->dev.kobj` | 同 L524 の embedded struct 化 |
+
+追加 shim:
+- `drivers/power/oz8806/sunmi_oz8806_compat.c` に `wake_up_bat_bmu()` no-op stub(MTK charger interop、Sunmi V2 では battery_work periodic で代替)
+- `drivers/power/oz8806/battery_config.h` に `extern void wake_up_bat_bmu(void);` 追加
+
+## kernel tree Makefile 側の設定
+
+`drivers/power/oz8806/Makefile` に MTK include path を明示追加(`drivers/misc/mediatek/` 配下と同じ ccflags):
+
+```makefile
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/$(MTK_PLATFORM)/include
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
 ```
 
-MT6739 kernel-4.4 では `mach/` → `mt-plat/` に移動:
-
-- ✅ `battery_common.h` → `mt-plat/battery_common.h` に sed 1 行で解決
-- ⚠️ `charging.h` から更に `mach/mtk_charging.h` の cascade、次段の header path 修正必要
-- 想定: 3-5 個の `mach/` include を書き換えれば通る、あとは vendor 定義の struct 差分次第
-
-Phase 1a-5 の完了条件としては駆動側部分(sunmi_oz8806_compat)が通ることで oz8806 の integration path が有効と確認できているため、`oz8806_battery.c` 本体の compile は refinement 扱いで別セッションに繰越可能。
+`<mach/mtk_charging.h>` などの MTK 標準内部 header が `mt6739/include/mach/` で見えるようになる。
 
 ## zImage 全体 build(kernel proper の vintage 不整合)
 

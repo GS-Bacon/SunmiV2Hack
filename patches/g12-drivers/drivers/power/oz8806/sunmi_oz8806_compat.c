@@ -49,3 +49,13 @@ EXPORT_SYMBOL(oz8806_get_boot_up_time);
 
 MODULE_DESCRIPTION("Sunmi V2 OZ8806 compatibility shims");
 MODULE_LICENSE("GPL v2");
+
+/*
+ * wake_up_bat_bmu(): MTK-side charger wakes the battery BMU. On Sunmi V2
+ * kernel 4.4 tree, this symbol is not exported by mtk_charger; the
+ * upstream MT6755 driver uses it inside #ifdef MTK_MACH_SUPPORT to force
+ * a battery-callback wakeup. Provide a no-op stub — the periodic
+ * battery_work in oz8806 already handles the polling case.
+ */
+void wake_up_bat_bmu(void) { }
+EXPORT_SYMBOL(wake_up_bat_bmu);
