@@ -10,6 +10,93 @@
 
 ---
 
+## 2026-07-02 10:15 (main) — G-9 端末完全復旧: 電源長押しで BROM 復活 → 純正 LK + boot 書き戻し → Android 通常起動
+
+### 変更概要
+
+G-7 で bootloop 状態のまま停止していた端末を復旧。**電源ボタン 30 秒長押しで SoC state を飛ばし** BROM handshake handler を復活させたのが決定打。復旧後は mtkclient で純正 `lk.img` と `boot.img` を焼き戻し、`mtk reset` → 電源 ON → **Sunmi ロゴ→Android 通常起動を確認**。G-8 の Track C/D/F/G v2 patch を焼く前提が整った。
+
+### 決定的発見: 電源長押しが BROM DEAD 状態解消の第一手
+
+これまでの前提「USB detach + 放置で SRAM が飛ぶのを待つ」が誤り。8 時間 USB 抜きで放置しても BROM handler は死んだまま(前セッション 02:00 の handshake test で `0/4 bytes matched`)。今回 **電源ボタン 30 秒長押し**を挟んだら、USB 挿すだけで BROM ↔ preloader の cycle が始まり handshake も通った。
+
+- 放置だけでは Vbat が SRAM に電源供給を続けるため、kamakiri stage 1 の内部 flag が clear されない
+- 電源ボタン長押しは SoC の PMIC 経由で内部電源を強制 off させる正規経路 = SRAM も確実に飛ぶ
+- 次回同種問題(BROM DEAD)の第一手として確立
+
+### bootloop の真因は 2 因の複合
+
+G-7 の bootloop は 1 因ではなく 2 因の複合だった:
+
+| 因 | いつ焼いた | 症状 |
+|---|---|---|
+| Magisk-patched boot.img | Phase 3-3(初期の root 試験)| LK の boot signature verify で reject |
+| Track F の patched LK | G-7 の焼き試験 | preloader の LK verify で reject |
+
+LK だけを stock に戻しても、Magisk-patched boot.img が LK を通らず継続 bootloop。 boot も stock に戻して初めて chain が通り Android 起動。
+
+### 復旧手順(再現可能な手順としてテンプレ化)
+
+1. USB 抜く(BROM DEAD 状態の端末)
+2. **電源ボタン 30 秒長押し**(SoC state を確実に飛ばす、これが core)
+3. USB 挿す → BROM ↔ preloader の 5 秒周期 cycle 開始
+4. `sudo mtk w lk dump/lk.img`(1 発、DA stage 1/2 upload + eMMC 書き込み)
+5. 続けて同 session で `sudo mtk w boot dump/boot.img`(handshake 不要、既存 DA が再利用される)
+6. `sudo mtk reset`(preloader 再起動 command)
+7. USB 抜く → 電源ボタン短押しで通常 boot → Android 起動確認
+
+### 復旧成功時の mtkclient 挙動(次回の期待値)
+
+- 初回 `w lk` で BROM handshake → Target Config 抽出 → DA stage 1/2 upload → EMMC write
+- DA が eMMC 上に stay するため、subsequent `w boot` は "Handling da commands..." で直接受付
+- `w` は複数 partition 対応 (`mtk w lk,boot dump/lk.img,dump/boot.img`) だが個別に叩いても同等
+- Target Config: `SBC/SLA/DAA/EPP_PARAM/RootCert/Mem R/W auth = All False`, `Var1=0xb4` (MT6739 の chip level 全 auth disabled、再確認)
+
+### 検証
+
+- `dump/lk.img` (stock, `fa9e3290...`) 書き込み: sector 730112, 2048 sectors = 1 MB, 100% complete
+- `dump/boot.img` (stock, `e15e02e5...`) 書き込み: sector 734464, 49152 sectors = 24 MB, 100% complete, ~1.7 MB/s
+- Android 通常起動確認済み(Sunmi ロゴ→ホーム画面)
+
+### eMMC 状態(復旧後)
+
+| Partition | 状態 | SHA256 (期待) |
+|---|---|---|
+| preloader-boot0/1 | stock (元々変えていない) | `10d33a52...` |
+| lk | stock (今回書き戻し) | `fa9e3290...` |
+| lk2 | stock (G-7 も lk2 は触っていない) | `fa9e3290...` |
+| boot | stock (今回書き戻し、Magisk-patched → stock) | `e15e02e5...` |
+| seccfg | stock (G-7 で restore 済) | `b011d83c...` |
+
+**全 partition が stock 状態**、G-8 の焼き試験の start point としてクリーン。
+
+### 主な変更ファイル
+
+- 更新: `WORKLOG.md`(本エントリ)
+- 更新: `.gitignore`(mtkclient 生成の `hwparam.json` を除外)
+- 新規: `logs/experiment-recovery-w-lk.log` — LK 書き戻し完全ログ(DA stage 1/2 + BROM handshake 成功記録)
+- 新規: `logs/experiment-recovery-w-boot.log` — boot.img 書き戻しログ
+- 新規: `logs/experiment-recovery-reset.log` — mtk reset ログ
+- 更新: `logs/experiment-G7-brom-handshake-diag.log` — 今朝の DEAD 再確認ログ(電源長押し前)
+
+### 次のTODO
+
+1. **G-8 Track F v2 + Track G v2 の焼き試験**: v2 patched preloader + v2 patched LK を焼いて段 1-5 全 auth gate skip 状態を実測。復旧経路は確立済みなので brick リスク許容範囲
+   - Order A(慎重):LK v2 のみ焼き → boot 動作確認 → 必要なら preloader v2 追加
+   - Order B(即断):preloader v2 + LK v2 同時焼き
+2. dm-verity 対策(kernel command line 経由の verify off)の事前調査
+3. AVB1 対策(boot.img header signature)の必要性判定
+4. Flutter kiosk 化(root 不要な kiosk 実装)に戻る選択肢も残す
+
+### 教訓・学び
+
+- **BROM DEAD 状態は「放置」ではなく「PMIC 経由の強制電源 off」が正解**。放置は Vbat 給電で SRAM が保持されて無効
+- **1 bootloop = 1 因、と決めつけない**。今回は Magisk-patched boot + patched LK の 2 因、片方だけ戻しても解消しない
+- **mtkclient は最初の 1 command で BROM handshake + DA upload、以降の command は DA session を再利用**。1 セッションで複数 partition を焼ける
+- **`0e8d:2000` preloader mode の停止は正常 boot ではなく mtkclient が preloader を掌握している状態**。実 boot 復活は reset command → USB 抜き → 電源ボタンで判定
+
+---
+
 ## 2026-07-02 03:30 (main) — G-8 Track G: LK 内も preloader と同型の SEC_POLICY gate、10 バイト LK v2 で全 chain 完成
 
 ### 変更概要

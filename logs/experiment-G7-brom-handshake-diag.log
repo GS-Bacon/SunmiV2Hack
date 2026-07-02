@@ -12,3 +12,33 @@
 [2026-07-02T01:59:52] --- Summary: 0/4 bytes matched expected ---
 [2026-07-02T01:59:52] VERDICT: BROM handler DEAD - CDC-ACM raw loopback only (same as previous session)
 [2026-07-02T01:59:52] NEXT: physical SoC state reset required (longer USB detach or battery disconnect)
+[2026-07-02T09:53:20] === BROM handshake diagnostic ===
+[2026-07-02T09:53:20] Target: 0e8d:0003
+[2026-07-02T09:53:20] Device found: bus=2 addr=58
+[2026-07-02T09:53:20] Detached kernel driver on intf 0
+[2026-07-02T09:53:20] Using intf 1: OUT=0x01 IN=0x81
+[2026-07-02T09:53:20] No bytes to drain (buffer already empty)
+[2026-07-02T09:53:20] --- Handshake byte-by-byte ---
+[2026-07-02T09:53:20] send 0xa0 -> recv 0xa0 (expected 0x5f) [ECHO_RAW]
+[2026-07-02T09:53:20] send 0x0a -> recv 0x0a (expected 0xf5) [ECHO_RAW]
+[2026-07-02T09:53:20] send 0x50 -> recv 0x50 (expected 0xaf) [ECHO_RAW]
+[2026-07-02T09:53:20] send 0x05 -> recv 0x05 (expected 0xfa) [ECHO_RAW]
+[2026-07-02T09:53:20] --- Summary: 0/4 bytes matched expected ---
+[2026-07-02T09:53:20] VERDICT: BROM handler DEAD - CDC-ACM raw loopback only (same as previous session)
+[2026-07-02T09:53:20] NEXT: physical SoC state reset required (longer USB detach or battery disconnect)
+[2026-07-02T09:55:34] === BROM handshake diagnostic ===
+[2026-07-02T09:55:34] Target: 0e8d:0003
+[2026-07-02T09:55:34] Device not found. Abort.
+[2026-07-02T09:55:44] === BROM handshake diagnostic ===
+[2026-07-02T09:55:44] Target: 0e8d:0003
+[2026-07-02T09:55:44] Device not found. Abort.
+[2026-07-02T10:06:42] === BROM handshake diagnostic ===
+[2026-07-02T10:06:42] Target: 0e8d:0003
+[2026-07-02T10:06:42] Device found: bus=2 addr=83
+[2026-07-02T10:06:42] Using intf 1: OUT=0x01 IN=0x81
+[2026-07-02T10:06:42] No bytes to drain (buffer already empty)
+[2026-07-02T10:06:42] --- Handshake byte-by-byte ---
+[2026-07-02T10:06:42] send 0xa0 FAILED: [Errno 110] Operation timed out
+[2026-07-02T10:06:42] --- Summary: 0/4 bytes matched expected ---
+[2026-07-02T10:06:42] VERDICT: BROM handler DEAD - CDC-ACM raw loopback only (same as previous session)
+[2026-07-02T10:06:42] NEXT: physical SoC state reset required (longer USB detach or battery disconnect)
