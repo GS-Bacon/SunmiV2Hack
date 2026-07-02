@@ -10,6 +10,73 @@
 
 ---
 
+## 2026-07-02 14:40 (main) — G-13 Phase 0/1a: Android 10 移植の Phase 0(端末不要準備)完了 + Phase 1a driver 書き起こし + clean compile 検証
+
+### 変更概要
+
+G-12 で確定した Android 10 移植計画(`docs/g12-android10-port-plan.md`)の Phase 0 全部 + Phase 1a-1/2/3/4/5(端末不要範囲)完走。build machine を `bacondata` (100.105.139.80) にセット、既存 Nextcloud データを一切壊さず作業完結。
+
+**Phase 0 完了項目**:
+
+- 0-A: bacondata workspace + build tool(gcc-arm-linux-gnueabi 13.3.0、後で gcc-9 も併設、ccache 4.9.1、repo 導入、Nextcloud service 全 active 継続確認)
+- 0-C: Iscle BSP kernel-4.4 tree 展開(877MB、`k39tv1_bsp_1g_defconfig` = MT6739 用 defconfig 発見、`sunmi_v2_defconfig` を fork)
+- 0-D: K-touch i9 device tree + mtk_patches を独立 clone(Phase 3 で LineageOS 17.1 tree に統合)
+- 0-E: kallsyms から Sunmi/Huaqin/oz8806 全 symbol 一覧化。**Ghidra RE 全省略**判明 —- oz8806 driver は `Vgdn1942/android_kernel_mt6755_3.18.119` に完全 source 存在(BMT/O2Micro reference driver 由来、Sunmi 独自 API 差分は typo alias + `_boot_up_time` の 2 個のみ)
+
+**Phase 1a 完了項目**:
+
+- 1a-1: `spi_printer.c` (~350 LoC) + `odm_printer_gpio.c` (~250 LoC) を clean-room 書き起こし
+- 1a-2: `mt6739-sunmi_v2-printer.dtsi`(SPI@1100a000 + gpio_printer node、実測 DTB 由来)
+- 1a-3: oz8806 driver 一式(upstream MT6755 の 8 ファイル + 自作 `sunmi_oz8806_compat.c`)を kernel tree に組み込み
+- 1a-4: `sunmi_v2_defconfig` に `CONFIG_SPI_PRINTER=y` / `CONFIG_ODM_PRINTER_GPIO=y` / `CONFIG_BATTERY_OZ8806=y` 追加
+- 1a-5: **Sunmi 独自 driver 全 5 ファイルが clean compile 済**:
+  - `spi_printer.o` (159KB)、`odm_printer_gpio.o` (144KB)、`sunmi_oz8806_compat.o` (34KB)、`parameter.o` (132KB)、`table.o` (16KB)
+
+### 未完(繰越)
+
+- `oz8806_battery.o`: MT6755 vintage の `mach/xxx.h` include cascade を `mt-plat/xxx.h` に書き換え作業が残る(5-10 個の header path 修正、Phase 1a-3 refinement)
+- **zImage full build**: kernel proper(`kernel/fork.o`)で kernel-4.4(2016)vs modern toolchain(gcc-13、gcc-9、binutils 2.42)の compile-time assertion で fail。**driver 側の問題ではない**(driver 独立 compile 全通過で証明)。次セッションで Linaro 4.9 toolchain 導入 or Phase 2(Android 10 kernel-4.9/4.14)前倒しで解決
+
+### 環境 patch 累積(次セッションで再現するとき必要)
+
+- `HOSTCFLAGS=-fcommon` / `KBUILD_HOSTCFLAGS=-fcommon`(GCC 10+ の `-fno-common` 対策)
+- `arch/arm/Makefile` から `subdir-ccflags-y += -Werror` 削除
+- `KCFLAGS="-Wno-error -Wno-array-bounds -Wno-stringop-overread -Wno-stringop-overflow -Wno-attribute-alias -Wno-error=attribute-alias"`
+- `.section "name", #alloc` → `, "a"` 一括置換(arch/arm/**/*.S)
+- `tools/dct/**/*.py` を Python 3 化(`2to3` + 手 patch: `cmp()`、`string.atoi()`、`configparser(strict=False)`、`list` shadow 修正)
+- `drivers/misc/mediatek/dws/mt6739/k39tv1_bsp_1g.dws` を disable + `arch/arm/boot/dts/k39tv1_bsp_1g/cust.dtsi` stub(DrvGen 抜き)
+
+### 主な変更ファイル
+
+- 新規: `docs/g12-phase0-workspace.md`(bacondata build 環境)
+- 新規: `docs/g12-phase0-device-tree.md`(K-touch i9 device tree fork 方針)
+- 新規: `docs/g12-phase0-kernel-baseline.md`(kernel-4.4 tree セットアップ)
+- 新規: `docs/g12-phase0-sunmi-patches.md`(Sunmi/oz8806 symbol 一覧、Ghidra RE 不要判明)
+- 新規: `docs/g12-phase0-progress.md`(進捗表 index)
+- 新規: `docs/g12-phase1a-driver-writeback.md`(RE ↔ 書き起こし対応表)
+- 新規: `docs/g12-phase1a-build.md`(build 検証結果、driver 5 ファイル clean compile 記録)
+- 新規: `patches/g12-drivers/`(適用可能な形で成果物 pack)
+  - `drivers/misc/{spi_printer.c, odm_printer_gpio.c, Kconfig.snippet, Makefile.snippet}`
+  - `drivers/power/oz8806/{sunmi_oz8806_compat.c, Kconfig, Makefile}`
+  - `arch/arm/boot/dts/mt6739-sunmi_v2-printer.dtsi`
+  - `README.md`(適用手順)
+
+### 次のTODO(次セッション、優先順)
+
+1. **Linaro 4.9 arm-eabi toolchain** を AOSP prebuilts から入手 → kernel-4.4 で zImage 通す(または Phase 2 前倒し)
+2. `oz8806_battery.c` の `mach/` include を `mt-plat/` に書換え、cascade 解決
+3. zImage 完成 → Phase 1b(実機焼き試験、要端末): `scratch/boot-permissive2.img` の kernel を差替、mtkclient で焼き、factory print test
+4. Phase 2 以降(Android 10 kernel + boot v2 + SAR ramdisk)
+
+### 教訓・学び
+
+- **Ghidra RE 全省略できた**: oz8806 は BMT/O2Micro reference driver で複数 vendor kernel に公開 source 存在、symbol 名照合で本命 tree(Vgdn1942 MT6755)特定 = 予定 Phase 0-E 工数の 9 割削減
+- **kernel-4.4 vintage は modern toolchain との相性が悪い**: Python 2 → 3、GCC 10+ 系 warning、binutils 2.36+ の ASM parsing、compile-time constant folding — 表面的 patch では対応しきれない層あり、真面目に vintage toolchain 使うのが最速
+- **driver 単体 compile で品質検証は成立**: full zImage が通らなくても、独立 target(`make drivers/misc/spi_printer.o` 等)で clean compile を確認すれば「我々の書き起こしコードが問題ではない」と切り分け可能
+- **Nextcloud サーバー流用は破壊懸念で敏感**: workspace 完全 isolation(/home/bacon/sunmiandroid/、/data 領域は絶対不可侵)、apt install 前に -s で dep 影響確認、install 後 systemctl is-active 全確認、を徹底
+
+---
+
 ## 2026-07-02 13:15 (main) — G-12: dm-verity 潰し確定、SELinux 全 permissive 化、printer 全経路健全、Android 10 移植計画確定
 
 ### 変更概要

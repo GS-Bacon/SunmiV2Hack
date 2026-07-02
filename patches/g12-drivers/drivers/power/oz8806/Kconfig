@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config BATTERY_OZ8806
+	tristate "O2Micro OZ8806 fuel gauge (BMT reference, Sunmi V2 shims)"
+	depends on I2C
+	select POWER_SUPPLY
+	help
+	  Support for the O2Micro OZ8806 battery management IC used on the
+	  Sunmi V2 T5930 POS terminal. This driver is based on the BMT
+	  reference design shipped in the MT6755 BSP with Sunmi-side shims
+	  to preserve OEM symbol names (typo alias, boot_up_time synonym) and
+	  the CV set-point module parameter (sunmi_constant_voltage=8438000).

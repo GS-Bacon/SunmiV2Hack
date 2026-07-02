@@ -1,0 +1,22 @@
+# Append to drivers/misc/Kconfig (or dedicated drivers/misc/sunmi/Kconfig if
+# preferred). Wire from parent Kconfig with:  source "drivers/misc/Kconfig"
+
+config SPI_PRINTER
+	tristate "Sunmi V2 thermal printer SPI driver"
+	depends on SPI && OF
+	help
+	  Support for the internal thermal printer on Sunmi V2 T5930 POS
+	  terminals. Exposes /dev/spidev0.0 with spidev-compatible ioctls
+	  and /sys/sunmi/ctrl/mcu_version for MCU firmware queries.
+
+	  Must be paired with ODM_PRINTER_GPIO for GPIO/IRQ control.
+
+config ODM_PRINTER_GPIO
+	tristate "Sunmi V2 printer GPIO/IRQ driver"
+	depends on GPIOLIB && OF
+	help
+	  GPIO + IRQ + sysfs driver for the Sunmi V2 thermal printer
+	  power/reset/level/handshake lines. Creates
+	  /sys/printer_pin/printer/ with 11 attributes.
+
+	  Companion to SPI_PRINTER.

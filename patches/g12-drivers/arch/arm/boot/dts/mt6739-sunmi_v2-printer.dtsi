@@ -1,0 +1,61 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * mt6739-sunmi_v2-printer.dtsi
+ *
+ * Sunmi V2 T5930 thermal printer bindings.
+ * Extracted from live DTB (logs/g12-permissive/dtb-*.txt).
+ *
+ * Include this from the board-level DTS:
+ *   #include "mt6739-sunmi_v2-printer.dtsi"
+ *
+ * pinctrl phandle 0x0e = MT6739 base pio node (soc/pinctrl in Iscle BSP).
+ * If pinctrl phandle differs in the target tree, override with:
+ *   &pio { ... };
+ * or match by symbol reference (&pio) instead of numeric phandle.
+ */
+
+/ {
+	/* SPI@1100a000: Sunmi/Huaqin-added 4th SPI bus on MT6739.
+	 * Standard MTK SPI driver bound via compatible = "mediatek,mt6739-spi".
+	 * IRQ 118 (0x76) level-triggered (bit 8 => IRQ_TYPE_LEVEL_HIGH).
+	 */
+	spi4: spi@1100a000 {
+		compatible = "mediatek,mt6739-spi";
+		reg = <0 0x1100a000 0 0x1000>;
+		interrupts = <0 0x76 8>;
+		clocks = <&topckgen 0x0a>,
+			 <&topckgen 0x30>,
+			 <&topckgen 0x1b>;
+		clock-names = "parent-clk", "sel-clk", "spi-clk";
+		mediatek,pad-select = <0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		spi_printer@0 {
+			compatible = "huaqin,sunmi_printer";
+			reg = <0>;                     /* CS 0 */
+			spi-max-frequency = <50000000>;/* 50 MHz */
+			status = "okay";
+		};
+	};
+
+	/*
+	 * odm_printer_gpio: platform device probed via DT.
+	 * All GPIO refs use &pio (MT6739 pinctrl node) — actual numbers below
+	 * come from live DTB extract at logs/g12-permissive/dtb-gpio-printer.txt.
+	 *
+	 * compatible = "summi,printer_gpio" preserves the OEM DTS typo.
+	 */
+	gpio_printer {
+		compatible = "summi,printer_gpio";
+		printer,pwr_en    = <&pio  7 0>;   /* MT_GPIO_7  */
+		printer,mcu_reset = <&pio  8 0>;   /* MT_GPIO_8  */
+		printer,lvl_en    = <&pio 11 0>;   /* MT_GPIO_11 */
+		printer,sleep     = <&pio 17 0>;   /* MT_GPIO_17 */
+		printer,irq1      = <&pio 19 0>;   /* MT_GPIO_19 (RTS) */
+		printer,resume    = <&pio 27 0>;   /* MT_GPIO_27 */
+		printer,irq0      = <&pio 28 0>;   /* MT_GPIO_28 (CTS) */
+		status = "okay";
+	};
+};
