@@ -1,0 +1,5 @@
+# Minimal init.sunmi.rc for Android 10 build
+# Sunmi 独自 service (guard, logo_customize) は Sunmi V2 stock で unused、Android 10 では要再検討
+
+on early-init
+    write /proc/bootprof "SUNMI:early-init"

@@ -1,0 +1,5 @@
+# Sunmi V2 printer_pin sysfs label
+genfscon sysfs /printer_pin/printer/power   u:object_r:printer_dev_power:s0
+genfscon sysfs /printer_pin/printer/reset   u:object_r:printer_dev_reset:s0
+genfscon sysfs /printer_pin/printer/sleep   u:object_r:printer_dev_sleep:s0
+genfscon sysfs /printer_pin/printer/resume  u:object_r:printer_dev_resume:s0

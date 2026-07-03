@@ -1,0 +1,6 @@
+# extract 済 proprietary は 171MB 超大、git 管理外(bacondata 側で mount + extract-files.sh 再現可能)
+vendor/sunmi/v2/proprietary/
+vendor/sunmi/v2/v2-vendor.mk
+
+# prebuilt zImage は 7.4MB、dump/boot.img から即再現可能
+device/sunmi/v2/prebuilt/zImage

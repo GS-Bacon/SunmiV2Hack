@@ -1,0 +1,9 @@
+# Sunmi V2 printer sysfs label 定義のみ
+#
+# 実 domain 許可は runtime `androidboot.selinux=permissive` fallback に委ねる
+# (Android 10 の neverallow rules に抵触せずに printer sysfs アクセスを通す最小構成)
+
+type printer_dev_power, fs_type, sysfs_type;
+type printer_dev_reset, fs_type, sysfs_type;
+type printer_dev_sleep, fs_type, sysfs_type;
+type printer_dev_resume, fs_type, sysfs_type;

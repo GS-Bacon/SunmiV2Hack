@@ -1,0 +1,6 @@
+# Minimal init.mt6739.rc for Android 10 build
+# Sunmi stock 版は Android 7.1 syntax(setprop / chomd / enabled 等)で host_init_verifier 非対応
+# Phase 1b 焼き前に Sunmi stock ramdisk 側 init.mt6739.rc に差替 or 個別 imports 追加
+
+on early-init
+    write /proc/bootprof "INIT:early-init"

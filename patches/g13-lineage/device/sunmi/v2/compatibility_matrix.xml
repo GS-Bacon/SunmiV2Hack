@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Empty compatibility matrix for pre-Treble Sunmi V2.
+     framework/device マッチングは lineage 17.1 default に委ねる -->
+<compatibility-matrix version="1.0" type="device">
+</compatibility-matrix>

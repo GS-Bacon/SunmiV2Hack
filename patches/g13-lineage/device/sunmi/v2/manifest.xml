@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Minimal manifest.xml for pre-Treble Sunmi V2.
+     pre-Treble device なので VINTF は最小限、HAL 定義は vendor blob 側で対応 -->
+<manifest version="1.0" type="device" target-level="3">
+    <hal format="hidl">
+        <name>android.hardware.graphics.mapper</name>
+        <transport arch="32">passthrough</transport>
+        <version>2.0</version>
+        <interface>
+            <name>IMapper</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl">
+        <name>android.hardware.renderscript</name>
+        <transport arch="32">passthrough</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IDevice</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <sepolicy>
+        <version>29.0</version>
+    </sepolicy>
+</manifest>

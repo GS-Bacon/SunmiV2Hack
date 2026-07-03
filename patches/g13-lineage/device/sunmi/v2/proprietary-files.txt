@@ -1,0 +1,61 @@
+# Sunmi V2 proprietary blobs (Phase 2-D で dump/system.img + dump/sunmi.img から extract)
+#
+# 形式: <src on device>[|<sha256>][:<dst on device>]
+# Phase 2-D の extract-files.sh 実行後、この list を元に vendor/sunmi/v2/proprietary/ に copy される
+#
+# 現時点は placeholder。Phase 2-D 実行後にコマンドで追記する:
+#   ./extract-files.sh /path/to/stock-system-mount
+#
+# 主要 vendor blob 群 (extract 対象、決定は Phase 2-D):
+
+# ---- MTK MT6739 platform HAL ----
+# vendor/lib/hw/gralloc.mt6739.so
+# vendor/lib/hw/hwcomposer.mt6739.so
+# vendor/lib/hw/memtrack.mt6739.so
+# vendor/lib/hw/audio.primary.mt6739.so
+# vendor/lib/hw/audio.a2dp.default.so
+# vendor/lib/hw/sensors.mt6739.so
+# vendor/lib/hw/camera.mt6739.so
+# vendor/lib/hw/power.mt6739.so
+# vendor/lib/hw/lights.mt6739.so
+# vendor/lib/hw/bluetooth.default.so
+# vendor/lib/hw/keystore.mt6739.so
+
+# ---- MTK common libs ----
+# vendor/lib/libcamera_client_mtk.so
+# vendor/lib/libmediahal_mtk.so
+# vendor/lib/libmtkjpeg.so
+# vendor/lib/libaudio_param_parser-1.0.so
+# vendor/lib/libbluetooth_mtk.so
+# vendor/lib/libaal.so
+
+# ---- MTK RIL / modem ----
+# vendor/lib/libmtk-ril.so
+# vendor/bin/hw/mtkFusionRild
+# vendor/bin/hw/rild.mtk
+
+# ---- WiFi (MT7961 or MT6739 WCN combo) ----
+# vendor/lib/libwifi-hal-mtk.so
+# vendor/lib/librs_jni.so
+# vendor/etc/wifi/wpa_supplicant.conf
+
+# ---- Sunmi 固有 ----
+# system/bin/guard
+# system/bin/logo_customize
+# vendor/etc/init/init.sunmi.rc
+# vendor/lib/libsunmi_hal.so (if exists)
+
+# ---- MTK init.rc (vendor init) ----
+# vendor/etc/init/hw/init.mt6739.rc
+# vendor/etc/init/hw/init.connectivity.rc
+# vendor/etc/init/hw/init.project.rc
+# vendor/etc/init/hw/init.aee.rc
+# vendor/etc/init/hw/init.ril.rc
+# vendor/etc/init/hw/init.trustonic.rc
+# vendor/etc/init/hw/init.common_svc.rc
+# vendor/etc/init/hw/init.microtrust.rc
+# vendor/etc/init/hw/init.sensor.rc
+# vendor/etc/init/hw/init.modem.rc
+# vendor/etc/ueventd.mt6739.rc
+
+# Phase 2-D 実行時に自動生成される予定

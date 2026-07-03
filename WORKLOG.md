@@ -10,6 +10,134 @@
 
 ---
 
+## 2026-07-03 07:10 (main) — G-14: Phase 2 全面書き換え + system.img build 成功 + Phase 1b 焼き試験(未達)
+
+### 変更概要
+
+**Phase 2 の路線を根本転換**: 「Android 10 化 = kernel 4.4 → 4.9 port」を放棄、K-touch i9 (Anica i9、MT6739) の実績を根拠に「**kernel stock 温存 + LineageOS 17.1 userspace 差替**」に切替。Phase 2-A〜F を実行し **system.img (Android 10 SDK 29) の build に成功**、その後 Phase 1b(実機焼き)に挑んだが USB 通信不安定で mtkclient 経由の flash 未完了。
+
+### 方向転換の根拠
+
+調査(WebFetch × 多数)で判明:
+- `Power535/android_kernel_common_MT6763`: commit 6 個の廃墟、実質使えない
+- AOSP `kernel/mediatek` に MT6739 の 4.9-q/4.14-q は無し(mooneye-4.4-oreo までで停止)
+- 他 OSS の MT6739 kernel-4.9 は事実上どこにも無い(MediaTek NDA)
+- **代わりに K-touch i9 (daviiid99/LineageOS_KTOUCH-i9 + PeterCxy/mtk_patches) が同 MT6739 で LineageOS 17.0/17.1 稼働実績**、手法は「kernel prebuilt 温存、5 patches + device tree のみ」
+
+さらに Sunmi V2 の実態を実測で確認(方向確定に必須):
+- Android **7.1.1** (SDK 25、`ro.build.version.release`)、pre-Treble
+- 32-bit ARM 一貫(`armeabi-v7a` only、`zygote32`)
+- kernel binary 先頭 `00 00 a0 e1` = ARM 32-bit NOP → **stock zImage は 32-bit ARM 確定**
+- printer/oz8806 driver は **stock kernel に完全 built-in**(`kallsyms.txt` に spi_printer_probe、oz8806_probe 等 40+ symbol、dmesg で charger_thread 稼働ログ確認)
+- stock boot.img は **ANDROID! header v0**、kernel 7.4MB、cmdline `bootopt=64S3,32S1,32S1 buildvariant=user`
+- stock zImage には initramfs 内蔵**なし**(gzip 2 個は kernel body だけ、cpio magic 無し)
+
+### Phase 2 実施(bacondata → serversmith 移行含む)
+
+**Phase 2-A**: bacondata 上 LineageOS 17.1 tree (72GB) の envsetup / lunch 動作確認
+
+**Phase 2-B**: `device/sunmi/v2/` device tree 新規作成(local `patches/g13-lineage/` で管理、bacondata / serversmith に rsync):
+- BoardConfig.mk: 32-bit arm、header v0、SAR 無効、pre-Treble(`PRODUCT_FULL_TREBLE_OVERRIDE := false`、`TARGET_COPY_OUT_VENDOR := system/vendor`)、`USE_XML_AUDIO_POLICY_CONF := 1`
+- lineage_v2.mk: `handheld_system.mk` + `telephony_system.mk` を明示継承(これが無いと `PRODUCT_BOOT_JARS` 空で hiddenapi/dex2oat 失敗)
+- device.mk: 主要 HAL/Audio/BT/WiFi/Sensor packages
+- system.prop.mk: `dalvik.vm.image-dex2oat-Xms/Xmx` を **`PRODUCT_DEFAULT_PROPERTY_OVERRIDES`** で設定(get-product-default-property 経由で dex2oat cmdline に反映)
+- rootdir/etc: fstab.mt6739(dm-verity `verify` 除去、`forceencrypt` 除去)、init.mt6739.rc は host_init_verifier 対応で **minimal 版に置換**(stock 1739 行は `setprop`/`chomd` typo/`enabled` 等 Android 10 で invalid)
+- sepolicy: printer_dev_* label 4 個定義のみ、blanket `allow domain` は `neverallow` に抵触するので削除(runtime `androidboot.selinux=permissive` に委ね)
+- manifest.xml/compatibility_matrix.xml: pre-Treble 用 minimal
+
+**Phase 2-C**: `dump/boot.img` から `scratch/bootimg-tool.py unpack` で kernel + DTB 分離。**kernel は zImage + appended DTB (75KB) の連結**を発見(offset 7,672,680 で DTB magic `d0 0d fe ed`)、`prebuilt/zImage` として全体を配置。stock zImage と build boot.img 中の kernel が **sha256 一致 (`4871a544cdd3aaa7fe76c220ca3c30ff2368c556cde55545cdae4885882d6251`)** で bit-identical 確認済。
+
+**Phase 2-D**: `dump/system.img` を loop mount(offset 0、ext4 SB は fs offset 1024)で開き `/system/vendor/` 配下から MTK HAL 10 個 (gralloc/hwcomposer/audio.primary/sensors/camera/gps/power/lights/vulkan/memtrack)、vendor/lib 256 個、vendor/bin 94 個、vendor/etc 191 個、vendor/firmware 12 個を extract。Sunmi 独自 `libsunmiscan.so` / `init_sunmi_perf.sh` / `sunmi-apns-conf.xml` 等も。合計 **569 ファイル 171MB**、`vendor/sunmi/v2/proprietary/` に配置し `setup-makefiles.sh` で `v2-vendor.mk` (PRODUCT_COPY_FILES 573 行) 自動生成。Gallery2*.apk 7 個は Android build system が「.apk は BUILD_PREBUILT で扱え」と拒否したので除外。
+
+**Phase 2-E**: PeterCxy/mtk_patches 5 個(external/skia GrGLCaps、frameworks/base hwui libbase、frameworks/base null client、frameworks/opt/net/wifi iface init 順、system/core rootdir ld template)を bacondata の LineageOS 17.1 tree に git apply。
+
+**Phase 2-F**: `mka systemimage` を **bacondata で 23 回 fail** した後 **serversmith (80 core) に移行して成功**。詰まりどころ:
+1. `external/icu` 未 sync (groups="pdk" で default 除外) → `git clone -b lineage-17.1` で追加
+2. `libtflite` 未定義 → `external/tensorflow/tensorflow/lite/` に stub Android.bp + `stub.cpp` 配置、`libtflite_kernel_utils` / `libtflite_static` も stub 化
+3. `libtinfo5` / `libncurses5` (Ubuntu 24.04 non-default) → jammy の deb を curl で持ってきて dpkg install
+4. sepolicy `printer_dev_*` に `allow domain` 書いたら `isolated_app.te` neverallow に抵触 → label 定義のみに簡素化
+5. `libneuralnetworks` / `libneuralnetworks_common` の tflite header 依存が深すぎ → 全部 stub.cpp に置換、`version_script: "libneuralnetworks.map.txt"` 削除
+6. ABI check → `SKIP_ABI_CHECKS=true`
+7. dex2oat が `--runtime-arg -Xms --runtime-arg -Xmx` の値空で失敗 → `PRODUCT_DEFAULT_PROPERTY_OVERRIDES` で `dalvik.vm.image-dex2oat-Xms/Xmx=64m` 明示
+8. `PRODUCT_BOOT_JARS` 空 → `handheld_system.mk` 継承追加(Lineage の common_full_phone.mk は base 継承しない)
+9. `USE_XML_AUDIO_POLICY_CONF := 1` 追加(Android 10 は legacy `.conf` を `#error` で拒否)
+10. `TARGET_NO_RECOVERY := true`(recovery ramdisk 生成でパス作成漏れ)
+11. `host_init_verifier` が stock init.mt6739.rc の Android 7.1 構文で 20 errors → minimal 版に置換
+12. **serversmith 側の m4/build-essential 未 install** → `apt install m4 flex bison gperf build-essential ...`
+
+**bacondata → serversmith 移行**:
+- Nextcloud 保護のため `/data` / `/var/www/nextcloud` / `/home/bacon/nextcloud_*` を rsync 完全除外
+- `rsync -a --exclude=out/ --exclude=.repo/objects.git*` で `/home/bacon/sunmiandroid/lineage-17.1/` を `bacon@192.168.0.107:...` (LAN 直経由、Tailscale 21MB/s → LAN 40MB/s)で 74GB 転送、35 分
+- serversmith `/mnt/sunmiandroid/` (300GB SSD の 262GB free) に配置、build も同 disk
+- **build 時間: 37 分 54 秒**(4-core bacondata の 60+ 分 fail 累積との比較で ≈ 5-10x 速い)
+
+**最終 artifact**(serversmith `/mnt/sunmiandroid/lineage-17.1/out/target/product/v2/`):
+- `system.img`(sparse、**794 MB**、partition 2.5GB の 30%)
+- `system-raw.img`(raw ext4、2.5GB、volume name `/`)
+- 検証: `ro.build.version.release=10`、`ro.build.version.sdk=29`、`ro.build.version.security_patch=2023-02-05`、`ro.build.version.incremental=eng.bacon.20260702.121302`
+- 構造: **SAR (System-as-Root) 形式**(`/init` → `/system/bin/init` symlink、`/init.rc` あり、`/system/build.prop` あり)。ただし `BOARD_BUILD_SYSTEM_ROOT_IMAGE := false` にしたにも関わらず LineageOS 17.1 Android 10 の default が SAR で出た(次セッションで要確認、Sunmi kernel-4.4 は SAR 非対応)
+- 課題: MTK HAL `gralloc.mt6739.so` 等が `/system/vendor/lib/hw/` に配置されず(v2-vendor.mk の PRODUCT_COPY_FILES 上書きの疑い、要 debug)、printer_dev sepolicy label が compile されず
+
+### Phase 1b 焼き試験(**未達**)
+
+Sunmi V2 実機(VB3920C924272、adb 認識、Android 7.1 稼働中)に対して:
+- **stock partition backup 済**(`dump/*.img` 一式、G-11/12 時点、boot=p27 25MB、system=p32 2.5GB、userdata=p34 3.8GB)
+- **BROM モード試験**: adb reboot -p → preloader (0e8d:2000) 自動突入、mtkclient で printgpt 成功、DAXFlash mode で DA SLA disabled、GPT 全 32 partition 情報取得
+- **flash 準備 script** 作成: `scratch/phase1b-round1-flash.sh`(system 書き込み + userdata wipe、boot は stock 温存)
+
+**詰まりどころ**: system.img flash 段階で BROM 突入が再現しなくなった。症状:
+- Vol+ 押しながら USB 挿し → device recovery 起動(BROM ではない)
+- Vol- 押しながら USB 挿し → 検出できず
+- 電源短押しで on → 検出できず
+- 電源長押しリセット後 → 検出できず
+- ケーブル交換後 → dmesg に `usb 2-1.1: device descriptor read/64, error -71` 大量発生、handshake 失敗の連続(USB negotiation error)、mtkclient は Preloader Handshake failed でリトライ継続
+
+原因推定:
+1. USB ケーブルの data 通信不良(charge-only の疑い、既に交換試行)
+2. Sunmi V2 側 USB-C 端子の物理接触 or negotiation 問題
+3. Vol ボタンの押下タイミング/組合せが機種依存で正解未確定(過去に一度だけ成功したのは Vol+ + USB 挿し込みタイミングが偶然合致した可能性)
+
+**未完了**: 実 flash / 起動観察 / bootloop 対応 の Phase 1b-3〜4。次セッションで USB 環境を整えて再挑戦(端末必須)。
+
+### 主な変更ファイル
+
+- `docs/g13-phase2-plan.md`: 全面書き換え(kernel port 案 → K-touch i9 pattern、31-236 行に膨張)
+- `patches/g13-lineage/device/sunmi/v2/`: LineageOS 17.1 device tree 新規(17 files、BoardConfig / lineage_v2.mk / device.mk / rootdir/etc / sepolicy / manifest 等)
+- `patches/g13-lineage/mtk-patches/`: PeterCxy/mtk_patches 5 個 fetch 済(external/skia、frameworks/base ×2、frameworks/opt/net/wifi、system/core)
+- `patches/g13-lineage/vendor/sunmi/v2/proprietary/`: 569 ファイル extract(.gitignore で追跡外)
+- `scratch/system-lineage.img`(sparse 794MB、build 済)、`scratch/system-lineage-raw.img`(raw 2.5GB、serversmith から fetch)
+- `scratch/phase1b-round1-flash.sh`: Phase 1b Round 1 flash script(mtkclient w system + e userdata)
+- `scratch/phase2f-verify.sh`: Phase 2-F artifact 検証 script
+- `.claude/plans/docs-g13-phase2-plan-md-zany-quokka.md`: plan mode で作った Phase 2 プランメモ
+
+### 環境
+
+- bacondata: LineageOS 17.1 tree (72GB) は温存(次セッションで比較・fallback 用)、system.img は build 完走せず(4-core が瓶頸)
+- serversmith (100.84.170.32, 80 core, 30GB RAM, /mnt 300GB): LineageOS 17.1 tree + build artifact 保持、system.img 794MB build 成功
+- local (`/home/bacon/SunmiV2Hack/scratch/`): sparse + raw system.img 両方 fetch 済、mtkclient 環境 (pycryptodomex install 済)
+
+### コミット
+
+- (次に本 commit で追加)
+
+### 次のTODO
+
+**優先度高**:
+1. **Sunmi V2 の USB 通信環境の確立**(別ケーブル / 別 PC / 別 USB port で試験)、BROM 突入手順の再現性確保
+2. Phase 1b Round 1 実施(system.img flash + userdata wipe、boot は stock 温存)、起動観察
+3. bootloop 発生時の logcat/dmesg 収集(BROM 経由で partition dump → 復旧)
+
+**優先度中**:
+4. system.img が SAR 形式で出た件の調査(BOARD_BUILD_SYSTEM_ROOT_IMAGE := false が効いてない、Android 10 default の可能性)
+5. MTK HAL `gralloc.mt6739.so` 等が `/system/vendor/lib/hw/` に来ない件の調査(v2-vendor.mk PRODUCT_COPY_FILES と handheld_system.mk 継承後の competition)
+6. printer_dev sepolicy が plat_sepolicy.cil に反映されない件(BOARD_SEPOLICY_DIRS の適用タイミング)
+
+**優先度低(将来)**:
+7. K-touch i9 の damolmo tree の `daviiid99/kernel_ktouch_i9` (404) の真の場所探索、prebuilt kernel の由来調査
+8. Phase 1a driver 6 個の 4.9 tree 移植(Android 12+ で GKI 化する時の再利用資産)
+
+---
+
 ## 2026-07-02 16:15 (main) — G-13 完結: Phase 0-B (LineageOS 17.1 sync) 完了確認、Phase 2 プラン策定
 
 ### 変更概要
